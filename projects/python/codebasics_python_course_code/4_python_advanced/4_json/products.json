@@ -1,0 +1,47 @@
+[
+    {
+        "product_id": 1,
+        "sku": "ABC123",
+        "name": "Wireless Mouse",
+        "price": 25.99,
+        "description": "A comfortable wireless mouse with ergonomic design.",
+        "in_stock": true,
+        "category": "Electronics"
+    },
+    {
+        "product_id": 2,
+        "sku": "XYZ789",
+        "name": "Mechanical Keyboard",
+        "price": 89.99,
+        "description": "A high-quality mechanical keyboard with customizable keys.",
+        "in_stock": true,
+        "category": "Electronics"
+    },
+    {
+        "product_id": 3,
+        "sku": "LMN456",
+        "name": "USB-C Charger",
+        "price": 19.99,
+        "description": "A fast-charging USB-C charger with multiple ports.",
+        "in_stock": false,
+        "category": "Accessories"
+    },
+    {
+        "product_id": 4,
+        "sku": "QWE234",
+        "name": "Bluetooth Speaker",
+        "price": 49.99,
+        "description": "A portable Bluetooth speaker with excellent sound quality.",
+        "in_stock": true,
+        "category": "Audio"
+    },
+    {
+        "product_id": 5,
+        "sku": "RTY678",
+        "name": "Smartphone Stand",
+        "price": 14.99,
+        "description": "An adjustable smartphone stand for hands-free viewing.",
+        "in_stock": true,
+        "category": "Accessories"
+    }
+]

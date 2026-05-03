@@ -1,0 +1,19 @@
+{
+    "ticker": "NVDA",
+    "price": 492.21,
+    "date": "2024-08-28",
+    "pe": 45.3,
+    "market_cap": 1230000000000.0,
+    "dividend_yield": 0.07,
+    "price_to_book": 23.5,
+    "dps": 0.16,
+    "ebitda": 16400000000.0,
+    "price_to_sales": 17.6,
+    "earnings_per_share": 10.85,
+    "revenue": 26900000000.0,
+    "gross_margin": 64.1,
+    "net_profit_margin": 36.2,
+    "debt_to_equity": 0.5,
+    "cash_flow": 9100000000.0,
+    "operating_margin": 40.8
+}

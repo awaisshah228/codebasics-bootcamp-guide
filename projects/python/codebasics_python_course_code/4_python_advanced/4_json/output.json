@@ -1,0 +1,13 @@
+{
+    "name": "Bob",
+    "age": 25,
+    "is_employee": false,
+    "skills": [
+        "JavaScript",
+        "Web Development"
+    ],
+    "address": {
+        "street": "456 Elm St",
+        "city": "Springfield"
+    }
+}

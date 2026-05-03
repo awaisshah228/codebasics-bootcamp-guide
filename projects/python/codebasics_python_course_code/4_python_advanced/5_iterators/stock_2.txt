@@ -1,0 +1,18 @@
+{
+    "ticker": "RIL",
+    "price": 2589.75,
+    "date": "2024-08-28",
+    "pe": 26.7,
+    "market_cap": 1950000000000.0,
+    "dividend_yield": 0.8,
+    "price_to_book": 2.9,
+    "dps": 15.0,
+    "ebitda": 1100000000000.0,
+    "price_to_sales": 1.5,
+    "earnings_per_share": 97.5,
+    "revenue": 6800000000000.0,
+    "gross_margin": 20.4,
+    "net_profit_margin": 6.3,
+    "debt_to_equity": 0.4,
+    "cash_flow": 820500000000.0
+}

@@ -1,0 +1,19 @@
+{
+    "ticker": "AAPL",
+    "price": 227.67,
+    "date": "2024-08-28",
+    "pe": 23.4,
+    "market_cap": 2410000000000.0,
+    "dividend_yield": 0.6,
+    "price_to_book": 31.8,
+    "dps": 0.92,
+    "ebitda": 94680000000.0,
+    "price_to_sales": 7.3,
+    "earnings_per_share": 9.73,
+    "revenue": 387530000000.0,
+    "gross_margin": 43.3,
+    "net_profit_margin": 25.9,
+    "debt_to_equity": 1.8,
+    "cash_flow": 104300000000.0,
+    "operating_margin": 30.2
+}
