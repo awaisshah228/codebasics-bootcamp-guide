@@ -78,10 +78,10 @@ data-scient-bootcamp/
 | 0 | Welcome to the Bootcamp Experience | ✅ 100% | [core/00-bootcamp-introduction](core/00-bootcamp-introduction/) |
 | 1 | Python: Beginner to Advanced | ✅ 100% | [core/01-python](core/01-python/) |
 | 2 | Online Credibility | ✅ 100% | [core/02-online-credibility](core/02-online-credibility/) |
-| 3 | Build In Public | 🔒 0% | [core/03-build-in-public](core/03-build-in-public/) |
-| 4 | SQL for Data Science | ✅ basics 100% / 🔒 advanced | [core/04-sql](core/04-sql/) |
-| 5 | Math & Statistics | 🟡 20% (active) | [core/05-math-statistics](core/05-math-statistics/) |
-| 6 | Machine Learning | 🔒 0% | [core/06-machine-learning](core/06-machine-learning/) |
+| 3 | Build In Public | ✅ 100% | [core/03-build-in-public](core/03-build-in-public/) |
+| 4 | SQL for Data Science | ✅ 100% | [core/04-sql](core/04-sql/) |
+| 5 | Math & Statistics | ✅ 100% | [core/05-math-statistics](core/05-math-statistics/) |
+| 6 | Machine Learning | ✅ 100% | [core/06-machine-learning](core/06-machine-learning/) |
 | 7 | Deep Learning | 🔒 0% | [core/07-deep-learning](core/07-deep-learning/) |
 | 8 | Natural Language Processing | 🔒 0% | [core/08-nlp](core/08-nlp/) |
 | 9 | Gen AI & Agentic AI | 🔒 0% | [core/09-gen-ai-agentic-ai](core/09-gen-ai-agentic-ai/) |
