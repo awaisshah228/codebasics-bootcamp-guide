@@ -121,6 +121,10 @@ Don't train off the live OLTP database. Land raw data in a **data lake** or
 
 You will spend **60-80%** of project time here. Accept it.
 
+> **Deep dive:** for the full step-by-step sequence (14 numbered steps,
+> code snippets, treatment options for every kind of issue), see
+> [DATA_CLEANING_GUIDE.md](DATA_CLEANING_GUIDE.md).
+
 ### 3.1 The cleaning checklist
 1. **Schema check** — column names, dtypes, ranges match expectations.
 2. **Missing values** — impute (mean/median/mode/KNN), flag, or drop.
