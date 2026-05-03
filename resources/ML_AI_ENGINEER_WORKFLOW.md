@@ -146,6 +146,10 @@ Don't eyeball — codify. Tools:
 
 ## Stage 4 — EDA & Feature Engineering
 
+> **Deep dive:** for the full step-by-step sequence (12 numbered steps,
+> code snippets, encoding strategies for every kind of feature), see
+> [FEATURE_ENGINEERING_GUIDE.md](FEATURE_ENGINEERING_GUIDE.md).
+
 ### 4.1 Exploratory Data Analysis
 Goal: build intuition about what signal exists.
 
@@ -201,6 +205,10 @@ If your shiny model can't beat this, something is wrong.
 
 ## Stage 6 — Model Training & Tuning
 
+> **Deep dive:** for the full 10-step sequence (algorithm-picking cheat sheet,
+> Optuna template, calibration, ensembling, anti-patterns, checklist), see
+> [MODEL_SELECTION_GUIDE.md](MODEL_SELECTION_GUIDE.md).
+
 ### 6.1 Pick the right family
 
 | Problem | First thing to try | Why |
@@ -229,6 +237,11 @@ If your shiny model can't beat this, something is wrong.
 ---
 
 ## Stage 7 — Evaluation
+
+> **Deep dive:** for the full 10-step sequence (metric selection, threshold
+> tuning, per-slice evaluation, calibration, bootstrap CIs, error analysis,
+> model cards, anti-patterns, checklist), see
+> [MODEL_EVALUATION_GUIDE.md](MODEL_EVALUATION_GUIDE.md).
 
 ### 7.1 Pick metrics that match the decision
 
