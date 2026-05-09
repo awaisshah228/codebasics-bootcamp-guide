@@ -16,3 +16,9 @@ venv/
 # secrets
 .env
 *.env.local
+
+# large datasets / archives — keep out of git, store locally or in cloud
+*.zip
+*.tar
+*.tar.gz
+*.tgz
