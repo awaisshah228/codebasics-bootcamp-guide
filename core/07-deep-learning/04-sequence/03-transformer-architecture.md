@@ -71,6 +71,97 @@ flowchart TB
 
 ---
 
+## Foundations — from static to contextual embeddings
+
+Before Transformer internals, two ideas have to click: what a word embedding *is*, and why static ones aren't enough. (Deeper coverage lives in the NLP module — this is the minimum you need to read the rest of this file.)
+
+### Word embeddings — turning meaning into vectors
+
+ML models don't understand text — they understand vectors. So we encode each word as a list of numbers that *captures its meaning*. Toy intuition (numbers made up):
+
+| Feature → | authority | rich | gender (M=1, F=−1) | has tail | is event |
+|---|---|---|---|---|---|
+| **king**   | 1.0 | 0.9 |  1.0 | 0.0 | 0.0 |
+| **queen**  | 1.0 | 0.9 | −1.0 | 0.0 | 0.0 |
+| **horse**  | 0.1 | 0.2 |  0.0 | 1.0 | 0.0 |
+| **battle** | 0.0 | 0.0 |  0.0 | 0.0 | 1.0 |
+
+In real models the features aren't human-named — they're learned by training a neural network on huge text corpora (Wikipedia, books, web). What you get is one fixed vector per word.
+
+Real dimensions: **Word2Vec = 300**, **BERT = 768**, **GPT-3 = 12,288**.
+
+### The "vector arithmetic" magic
+
+Once meanings live in a vector space, you can do math with them:
+
+```
+king − man + woman ≈ queen
+Russia − Moscow + Delhi ≈ India
+walking − walked + ran ≈ running
+```
+
+Visualizing in 3-D (real space is hundreds of dims):
+
+```
+        ▲ z
+        │
+   queen ●────────● king
+         │\         \
+         │ \         \         "gender direction"
+   woman ●──\─────────● man    is the same vector
+                \                between every M/F pair
+                 \
+                  ▼ y
+                    ─────────► x
+```
+
+The vector from `king → queen` is the same as `man → woman` and `uncle → aunt` — the model has learned a "gender direction" purely from co-occurrence statistics. That's what an embedding *is*.
+
+Static-embedding models: **Word2Vec**, **GloVe**, **FastText**.
+
+### Why static embeddings aren't enough
+
+A static embedding gives the word `track` exactly **one** vector — but the same word means different things:
+
+```
+"the train will run on the track"       → track = railway
+"my package is late, help me track it"  → track = follow / monitor
+```
+
+Same problem with `dish`:
+
+```
+"I made a dish"                        → could mean anything
+"I made a rice dish"                   → likely risotto, biryani…
+"I made an Indian rice dish"           → biryani, pulao…
+"I made a sweet Indian rice dish"      → kheer, payasam
+```
+
+Each adjective should *change* the embedding of `dish`. A static lookup table can't do that.
+
+### What we need: contextual embeddings
+
+The Transformer's job is to take the static embedding of every token and *let it absorb meaning from its neighbors*. Picture it as moving the `dish` vector through embedding space:
+
+```
+   dish ──+riceness──► rice-dish ──+indianness──► Indian-rice-dish
+                                                        │
+                                                  +sweetness
+                                                        ▼
+                                              sweet-Indian-rice-dish
+                                              (next-word prediction = kheer)
+```
+
+Each `+riceness`, `+indianness`, `+sweetness` is itself a vector built from the surrounding tokens — and **attention is the mechanism that builds those vectors**. Once you internalize this, the rest of the Transformer is just engineering.
+
+```mermaid
+flowchart LR
+    S[Static embedding<br/>'dish' = single fixed vector] --> A[Self-attention<br/>looks at 'sweet', 'Indian', 'rice']
+    A --> C[Contextual embedding<br/>'dish' shifted toward 'kheer-region']
+```
+
+---
+
 ## 1. Why Transformers replaced RNNs
 
 | | RNN/LSTM | Transformer |
@@ -236,14 +327,16 @@ This is why we have GPT-4 and Claude. RNNs *couldn't* be scaled this way.
 
 ## 9. Sizing reference
 
-| Model | Layers | d_model | Heads | Params |
-|---|---|---|---|---|
-| BERT-base | 12 | 768 | 12 | 110M |
-| BERT-large | 24 | 1024 | 16 | 340M |
-| GPT-2 small | 12 | 768 | 12 | 124M |
-| GPT-2 large | 36 | 1280 | 20 | 774M |
-| GPT-3 | 96 | 12288 | 96 | 175B |
-| LLaMA 3 70B | 80 | 8192 | 64 | 70B |
+| Model | Layers | d_model | Heads | d_k | Vocab | Params |
+|---|---|---|---|---|---|---|
+| BERT-base   | 12 | 768   | 12 | 64  | 30,522  | 110M |
+| BERT-large  | 24 | 1024  | 16 | 64  | 30,522  | 340M |
+| GPT-2 small | 12 | 768   | 12 | 64  | 50,257  | 124M |
+| GPT-2 large | 36 | 1280  | 20 | 64  | 50,257  | 774M |
+| GPT-3       | 96 | 12288 | 96 | 128 | 50,257  | 175B |
+| LLaMA 3 70B | 80 | 8192  | 64 | 128 | 128,256 | 70B  |
+
+Useful identity: **`d_k = d_model / n_heads`** — every head's Q/K/V is this much wide. So in GPT-3, `12288 / 96 = 128`. The total parameter count for one attention block is roughly `4 · d_model²` (one matrix each for `W_Q`, `W_K`, `W_V`, `W_O`).
 
 ---
 
@@ -259,7 +352,60 @@ This is why we have GPT-4 and Claude. RNNs *couldn't* be scaled this way.
 
 ---
 
-## 11. Self-attention — a fully worked numerical example
+## 11. Self-attention — intuition first, then a fully worked numerical example
+
+### Intuition #1 — the library
+
+You walk into a library asking for "a quantum physics book."
+- Your **query** = what you want
+- The **keys** = labels on each shelf (`history`, `drama`, `quantum mechanics`, …)
+- The **values** = the actual book contents
+
+The librarian compares your query to every key, finds the best match, and hands you that shelf's book. **Attention is exactly this**: each token has a query, every other token offers a key, and the output is the weighted blend of values where the query best matches keys.
+
+```
+                Q ("quantum physics?")
+                 │
+                 ▼
+   ┌──────────────────────────────────────────────────┐
+   │  K=history    K=drama    K=quantum-mech    K=cs  │   ← shelf labels
+   │     0.05        0.02         0.85           0.08 │   ← match score
+   └──────────────────────────────────────────────────┘
+                                ▼
+                        weighted blend of book contents (V)
+```
+
+### Intuition #2 — the professor and four students
+
+A professor wants an essay on **quantum computing**. He asks four students. Each student claims an expertise (the **key**) and writes a paragraph (the **value**):
+
+| Student | Key (claim)             | Value (paragraph)       | Match to query | Weight used |
+|---------|-------------------------|-------------------------|----------------|-------------|
+| Mohan   | "I know linear algebra" | paragraph on lin alg    | medium         | 10%         |
+| Meera   | "I know quantum mech"   | paragraph on QM         | high           | **60%**     |
+| Kathy   | "I know CS"             | paragraph on CS         | high           | **29%**     |
+| Bob     | "I know philosophy"     | paragraph on philosophy | none           | 1%          |
+
+Final essay = `0.10·Mohan + 0.60·Meera + 0.29·Kathy + 0.01·Bob`. **That's self-attention in one paragraph.**
+
+The match score is mathematically just `Q · K` (dot product). Soft-maxed across all keys to get the percentages. The output is `Σ wᵢ · Vᵢ`.
+
+### Where Q, K, V come from
+
+For each token we have a static + positional embedding `x` (e.g., 768-dim). Three learned matrices project `x` into the 64-dim Q/K/V space:
+
+```
+Q_token = x · W_Q       W_Q : (768 × 64)
+K_token = x · W_K       W_K : (768 × 64)     ← same x, three different views
+V_token = x · W_V       W_V : (768 × 64)
+```
+
+`W_Q, W_K, W_V` are *learned during pre-training* and frozen at inference. Intuitively:
+- `W_Q` learns "given this token, what should it ask of others?"
+- `W_K` learns "what should this token advertise about itself?"
+- `W_V` learns "what content should this token contribute when chosen?"
+
+### Now the math (worked numerically)
 
 Most explanations hand-wave attention. Let's actually compute it for a 3-token, 2-dim toy.
 
@@ -339,7 +485,176 @@ That's the entire self-attention computation. The output for each token is a **w
 
 ---
 
-## 12. Tokenization — how text becomes tokens
+## 12. End-to-end trace — a full sentence through the encoder
+
+Let's trace **"I made sweet Indian rice dish"** through a BERT-base encoder, step by step, with concrete shapes and numbers.
+
+BERT-base sizes: `vocab = 30,522`, `d_model = 768`, `n_layers = 12`, `n_heads = 12`, `d_k = 64` (= 768 / 12), `d_ff = 3072`.
+
+```mermaid
+flowchart TB
+    S["'I made sweet Indian rice dish'"] --> T["1. Tokenize<br/>+ [CLS] / [SEP]"]
+    T --> ID["2. Token IDs<br/>(8 ints into vocab)"]
+    ID --> E["3. Static embedding lookup<br/>(8 × 768)"]
+    E --> P["4. + Positional encoding<br/>(8 × 768)"]
+    P --> Q["5. Compute Q, K, V<br/>per head: (8 × 64)"]
+    Q --> A["6. Attention scores<br/>QKᵀ/√64 → softmax"]
+    A --> W["7. Weighted V → contextual<br/>(8 × 64) per head"]
+    W --> M["8. Concat 12 heads → (8 × 768)<br/>Linear W_O"]
+    M --> R1["9. Add &amp; Norm"]
+    R1 --> F["10. FFN: 768 → 3072 → 768<br/>nonlinearity per token"]
+    F --> R2["11. Add &amp; Norm"]
+    R2 --> L["12. Repeat × 12 layers"]
+    L --> H["Final hidden states<br/>(8 × 768)"]
+    H --> O["Task head:<br/>next-word → softmax → 'kheer'"]
+```
+
+### Step 1 — tokenize and add special tokens
+
+```
+input:  "I made sweet Indian rice dish"
+              │
+              ▼  (BERT WordPiece tokenizer)
+tokens: [CLS]   I    made   sweet   Indian   rice   dish   [SEP]
+IDs:     101  146   1189   4664    3160    5147   8331    102
+```
+
+`[CLS]` marks the start (its final hidden state is what BERT classifies on); `[SEP]` marks sentence boundaries. Total: **8 tokens**.
+
+GPT-2 would skip `[CLS]/[SEP]` and use a different vocab (~50,257 BPE tokens) — the rest of the pipeline is the same.
+
+### Step 2 — token ID → static embedding
+
+Each ID indexes a row in the **static embedding matrix** of shape `(30,522 × 768)`. The 8 token IDs become an `(8 × 768)` matrix `X`:
+
+```
+                d_0    d_1    d_2   ...   d_767
+[CLS]   ID 101 [ 0.12, -0.45,  0.88, …, -0.03 ]
+ I      ID 146 [ 0.21,  0.55, -0.10, …,  0.91 ]
+ made   ID1189 [-0.34,  0.07,  0.42, …, -0.22 ]
+ sweet  ID4664 [ 0.66, -0.18,  0.93, …,  0.40 ]
+ Indian ID3160 [ 0.81,  0.32, -0.55, …,  0.18 ]
+ rice   ID5147 [ 0.45,  0.11,  0.27, …, -0.39 ]
+ dish   ID8331 [ 0.05, -0.62,  0.71, …,  0.84 ]
+[SEP]   ID 102 [-0.10,  0.04,  0.31, …, -0.05 ]
+```
+
+(Numbers illustrative; real values are learned during pre-training.)
+
+### Step 3 — add positional encoding
+
+Each row gets a position-specific vector added so the model knows order:
+
+```
+final_embed[pos] = static_embed[token] + positional_embed[pos]
+
+X' shape: (8 × 768)  ← input to layer 1
+```
+
+Without this, the encoder would treat the sentence as a bag of words.
+
+### Step 4 — compute Q, K, V (one head shown)
+
+For each of 12 attention heads, project `X'` through learned matrices:
+
+```
+W_Q : (768 × 64)        d_k = d_model / n_heads = 768 / 12 = 64
+W_K : (768 × 64)
+W_V : (768 × 64)
+
+Q = X' · W_Q     →  shape (8 × 64)
+K = X' · W_K     →  shape (8 × 64)
+V = X' · W_V     →  shape (8 × 64)
+```
+
+Each token now has its own 64-dim query, key, and value.
+
+### Step 5 — attention weights for the word `dish`
+
+`Q_dish` is dotted with every token's key, scaled, soft-maxed:
+
+```
+score(dish, t) = (Q_dish · K_t) / √64
+
+raw scores  →  softmax  →  attention weights:
+
+           [CLS]    I    made   sweet  Indian   rice   dish   [SEP]
+  dish:    0.02   0.03   0.08   0.36   0.14    0.18   0.17   0.02
+                                  ▲      ▲       ▲      ▲
+                          adjectives that modify "dish" win the most weight
+```
+
+`sweet` (36%), `rice` (18%), `Indian` (14%) get high attention — exactly the words that change `dish`'s meaning. `I` and `made` barely matter; replacing `I` with `Rahul` wouldn't change the dish.
+
+### Step 6 — weighted sum of values → contextual embedding
+
+```
+context_dish = 0.02·V_[CLS] + 0.03·V_I + 0.08·V_made + 0.36·V_sweet
+             + 0.14·V_Indian + 0.18·V_rice + 0.17·V_dish + 0.02·V_[SEP]
+                                                               (one 64-dim vector)
+```
+
+This is `dish` *enriched* with its modifiers — the contextual embedding head 1 produced. Repeat the same for every token in parallel.
+
+### Step 7 — concatenate 12 heads
+
+12 heads run in parallel, each looking at different relationships (adjectives, verbs, syntax, long-range references, …). Concatenate `12 × 64 = 768`, project through `W_O (768 × 768)`:
+
+```
+multihead_out = Concat(head_1, …, head_12) · W_O      shape (8 × 768)
+```
+
+### Step 8 — residual + LayerNorm + FFN + residual + LayerNorm
+
+```
+attn_out  = MultiHead(X')                       (8 × 768)
+x1        = LayerNorm(X' + attn_out)            ← residual #1
+ffn_out   = GELU(x1 · W_1) · W_2                W_1: (768 × 3072), W_2: (3072 × 768)
+x2        = LayerNorm(x1 + ffn_out)             ← residual #2, shape (8 × 768)
+```
+
+**Why the FFN matters.** Attention only mixes existing token vectors (a *linear* operation across tokens — even with softmax, the per-token transform is linear in V). The FFN expands 768 → 3072 → 768 with a GELU/ReLU in between, adding **nonlinearity per position**. Language is full of nonlinear nuance — negation, idioms, sarcasm, "not bad" ≠ "bad" — and the FFN is where the model encodes them. Multi-head attention captures *who relates to whom*; the FFN captures *what to make of the relationship*.
+
+### Step 9 — repeat for 12 layers
+
+`x2` becomes the input to the next encoder block. After 12 such blocks, you have the final `(8 × 768)` contextual embedding.
+
+### Step 10 — task head
+
+| Task | Head | Output |
+|---|---|---|
+| Next-word prediction | `Linear(768 → 30522) → softmax` on last token | `kheer` (highest prob) |
+| Classification | `Linear(768 → n_classes)` on `[CLS]` row | sentiment / topic label |
+| NER | `Linear(768 → n_tags)` on every row | per-token entity tag |
+
+For the next-word case, the softmax over the 30,522-token vocabulary might look like:
+
+```
+   kheer    0.41    ◄─── highest, because of "sweet Indian rice"
+   payasam  0.18
+   biryani  0.06    (would be higher without "sweet")
+   pulao    0.04
+   …
+   chair    0.0001
+   banana   0.00003
+```
+
+Same forward pass, same architecture — only the final head changes for different tasks.
+
+### Mental model — what each layer is doing
+
+```
+Layer 1   surface-level co-occurrence ("rice" near "dish")
+Layer 4   short-range syntax ("sweet" modifies "dish")
+Layer 8   semantic role ("Indian" is a cuisine adjective)
+Layer 12  task-specific ("kheer" is the right next word given all of the above)
+```
+
+This is hand-wavy but a useful intuition: **lower layers learn local patterns, upper layers learn task-specific abstractions.** This is also why fine-tuning usually only updates the top few layers + task head.
+
+---
+
+## 13. Tokenization — how text becomes tokens
 
 Before anything goes into a Transformer, text is broken into integer IDs. The tokenizer is its own learned algorithm.
 
@@ -371,9 +686,24 @@ Notice GPT-2 keeps spaces inside tokens (`" is"`); BERT uses `##` to mark contin
 
 ---
 
-## 13. Training vs inference — the autoregressive secret
+## 14. Training vs inference — the autoregressive secret
 
 A Transformer is trained one way and used another. Confusing the two trips up most beginners.
+
+### Where the training data comes from (self-supervised)
+
+You don't need labelers. Take any text — Wikipedia, books, the web — slice it into `(X, y)` pairs where `y` is just the next word (or span):
+
+```
+sentence:  "developing an advanced crude oil spacecraft"
+
+X:  "developing an advanced crude oil"     y: "spacecraft"
+X:  "developing an advanced crude"         y: "oil"
+X:  "developing an advanced"               y: "crude"
+…
+```
+
+The model predicts `y_hat`, you compute loss vs the true `y`, back-propagate through the entire stack — `W_Q`, `W_K`, `W_V`, FFN weights, the embedding matrix, all of them get updated. After billions of such pairs, the matrices "know" English. This is why Transformers can be trained on the entire internet without human labels — the data labels itself.
 
 ### Training (parallel, "teacher forcing")
 
@@ -412,7 +742,7 @@ flowchart LR
 
 ---
 
-## 14. KV-cache — the trick that makes generation fast
+## 15. KV-cache — the trick that makes generation fast
 
 In step 3 above, the prompt is `"The cat"` plus the new token `"sat"`. Naive recomputation re-does attention for *every* previous position — wasteful.
 
@@ -438,7 +768,7 @@ This is one of the few areas where the architecture has visibly evolved post-201
 
 ---
 
-## 15. Modern improvements (post-original-paper)
+## 16. Modern improvements (post-original-paper)
 
 The 2017 paper is recognizable but no production model uses it untouched. Major upgrades:
 
@@ -476,7 +806,7 @@ flowchart LR
 
 ---
 
-## 16. Sampling at inference — controlling what the model says
+## 17. Sampling at inference — controlling what the model says
 
 The Transformer outputs a probability distribution over the vocabulary at each step. **How you pick the next token matters as much as the model itself.**
 
@@ -517,7 +847,7 @@ not      0.02
 
 ---
 
-## 17. Scaling laws and emergent abilities
+## 18. Scaling laws and emergent abilities
 
 Why do Transformers keep getting better with size?
 
@@ -538,7 +868,7 @@ Some capabilities (multi-step reasoning, in-context learning, instruction follow
 
 ---
 
-## 18. End-to-end pipeline visualization
+## 19. End-to-end pipeline visualization
 
 ```mermaid
 flowchart TB
@@ -576,29 +906,35 @@ Inference loops the dotted arrow until end-of-sequence token or max_tokens.
 - [ ] Why divide by √d_k in the attention formula?
 - [ ] What's the time complexity of self-attention in `seq_len`?
 
-### Tokenization (§12)
+### End-to-end trace (§12)
+- [ ] Walk through "I made sweet Indian rice dish" from token IDs to next-word prediction
+- [ ] Why does `dish` attend strongly to `sweet`/`Indian`/`rice` but weakly to `I`/`made`?
+- [ ] What changes between BERT-base and GPT-3 in this pipeline (vocab, d_model, layers)?
+
+### Tokenization (§13)
 - [ ] What does BPE do, and why are spaces sometimes part of a token in GPT-2?
 - [ ] Why does English text cost fewer tokens than Hindi or Chinese?
 - [ ] If your prompt is 1000 words, roughly how many tokens does that translate to?
 
-### Training vs inference (§13-14)
+### Training vs inference (§14-15)
 - [ ] What's "teacher forcing"?
+- [ ] How are training pairs `(X, y)` generated without human labels?
 - [ ] Why is inference sequential while training can be parallel?
 - [ ] What does the KV-cache do, and why is it memory-intensive?
 - [ ] What's the difference between MQA, GQA, and MLA?
 
-### Modern improvements (§15)
+### Modern improvements (§16)
 - [ ] What problem does Flash Attention solve?
 - [ ] Why pre-norm over post-norm?
 - [ ] In an MoE model, what does the "router" do?
 - [ ] What's RoPE and why is it used in LLaMA?
 
-### Sampling (§16)
+### Sampling (§17)
 - [ ] Difference between top-k and top-p sampling?
 - [ ] What does temperature = 0 mean? Temperature = 2?
 - [ ] When would you use beam search vs. nucleus sampling?
 
-### Scaling (§17)
+### Scaling (§18)
 - [ ] State the Chinchilla rule of thumb
 - [ ] What's an "emergent ability"?
 
@@ -681,6 +1017,8 @@ Inference loops the dotted arrow until end-of-sequence token or max_tokens.
 | **In-context learning** | Model learns a task from examples in the prompt — no weight updates |
 
 ## Further reading
+- **Interactive Transformer visualizer** — [Polo Club Transformer Explainer](https://poloclub.github.io/transformer-explainer/) — live GPT-2 trace in your browser, click any layer/head to see Q/K/V vectors
+- **3Blue1Brown deep learning series** — videos DL5/DL6/DL7 on attention and Transformers, the most visual explanation available
 - Deeper dive into the attention math: [04-attention.md](04-attention.md)
 - Pre-trained Transformers in practice: [05-bert-huggingface.md](05-bert-huggingface.md)
 - Visual + math reference for sequence models: [../architectures-and-math.md](../architectures-and-math.md)

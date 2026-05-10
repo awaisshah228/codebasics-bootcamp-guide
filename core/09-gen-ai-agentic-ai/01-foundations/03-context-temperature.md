@@ -283,3 +283,45 @@ This is one of the most common production patterns for Gen AI: **deterministic s
 - [ ] When set frequency_penalty above 0?
 - [ ] Why is `response_format={"type": "json_object"}` safer than parsing free text?
 - [ ] Set up a deterministic extraction call to OpenAI.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Context window** | Maximum tokens (prompt + completion) the model can process in one call |
+| **Token** | The model's atomic unit — usually a sub-word piece, not a full word |
+| **Token budget** | The portion of the context window you've already used |
+| **`max_tokens`** | Hard cap on how many tokens the model is allowed to *generate* |
+| **Temperature** | Logit-scaling factor controlling randomness (0 = deterministic, >1 = more random) |
+| **Top-p (nucleus)** | Keep smallest set of tokens with cumulative prob ≥ p, then sample |
+| **Top-k** | Keep only the k highest-probability tokens, then sample |
+| **Greedy decoding** | Always pick the most likely next token (equivalent to T=0) |
+| **Beam search** | Track the k most-likely *sequences* — common in translation, rare in chat |
+| **Logits** | Pre-softmax raw scores, before temperature/top-p shaping |
+| **Sampling** | Process of picking the next token from the probability distribution |
+| **Seed** | Integer making sampling reproducible — best-effort across model versions |
+| **Determinism** | Same input + same seed + same model = same output |
+| **Frequency penalty** | Reduces probability of tokens that have already appeared often |
+| **Presence penalty** | Reduces probability of any already-used token, regardless of count |
+| **Stop sequences** | Strings that, when generated, force the model to stop early |
+| **Prompt caching** | Storing the encoded prompt so repeated prefixes are cheaper / faster |
+| **System prompt** | The "persistent personality" message attached to every call |
+| **Lost in the middle** | Models attend less to information in the middle of long contexts |
+| **JSON mode / structured output** | API setting that constrains output to valid JSON |
+| **Streaming** | Receiving tokens as they're generated, not waiting for full reply |
+| **TTFT** | Time To First Token — primary user-perceived latency metric |
+| **Throughput** | Tokens-per-second the API can deliver under load |
+| **Sampling parameters** | Collective name for temperature / top-p / top-k / penalties |
+| **Autoregressive** | Generates one token at a time, each conditioned on previous |
+| **Schema-validated output** | Output forced to conform to a JSON schema (most reliable structured output) |
+
+## Further reading
+- Sibling: [02-llm-fundamentals.md](02-llm-fundamentals.md)
+- Sibling: [04-prompt-engineering.md](04-prompt-engineering.md)
+- Sibling: [05-hallucinations-security-cost.md](05-hallucinations-security-cost.md)
+- Module-level: [../01-llm-fundamentals.md](../01-llm-fundamentals.md), [../02-prompt-engineering.md](../02-prompt-engineering.md)
+- Sampling math (decoding strategies in depth): [../../07-deep-learning/04-sequence/03-transformer-architecture.md](../../07-deep-learning/04-sequence/03-transformer-architecture.md) §16
+- Production deployment: [../08-deployment-cost.md](../08-deployment-cost.md)
+- Style guide: [../../../BEGINNER-STYLE-GUIDE.md](../../../BEGINNER-STYLE-GUIDE.md)
