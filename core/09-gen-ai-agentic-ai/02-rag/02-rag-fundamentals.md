@@ -5,6 +5,95 @@
 
 ---
 
+## In one sentence
+**RAG (Retrieval-Augmented Generation)** means: before the language model answers, fetch a few relevant chunks from your own data and paste them into the prompt — so the answer is grounded in your documents instead of the model's memory.
+
+## Real-world analogy
+Closed-book exam vs open-book exam. A plain LLM is taking the test from memory and will guess when it forgets. RAG hands the model the three most relevant pages from the textbook *just before* it answers. Same student, suddenly accurate, citable, and you can update the textbook without retraining the student.
+
+## The intuition (plain English)
+- LLMs do not know your private data, your latest product catalogue, or anything that happened after their training cut-off.
+- Instead of retraining the model every time a fact changes, you keep your documents in a **vector database** and look them up at query time.
+- "Look up" means: embed the user's question, find the top-k closest chunks, and stitch them into the prompt.
+- The model is then instructed to answer **only from the supplied context** and to say "I don't know" if the answer is not there.
+- This single pattern powers customer-support bots, legal/medical assistants, code-search tools, and the bootcamp's real-estate assistant.
+
+## Mini worked example — end-to-end RAG over real-estate listings
+
+You have three indexed listings:
+
+```
+[L1] "3-bed condo in downtown Lahore, $500k, balcony, parking."
+[L2] "5-bed villa in suburbs of Lahore, $1.2M, garden, pool."
+[L3] "Studio near university, Karachi, $800/month, furnished."
+```
+
+User asks: *"Show me an affordable family home in Lahore."*
+
+**Step 1 — retrieve.** Embed the question with `voyage-3`, search the ChromaDB collection, get top 2:
+
+```
+top hits: [L1] (sim 0.93), [L2] (sim 0.89)
+```
+
+**Step 2 — build the prompt.**
+
+```
+You are a helpful real-estate assistant. Use ONLY the context.
+If the answer is not there, say "I don't know."
+
+<context>
+[1] 3-bed condo in downtown Lahore, $500k, balcony, parking.
+[2] 5-bed villa in suburbs of Lahore, $1.2M, garden, pool.
+</context>
+
+Question: Show me an affordable family home in Lahore.
+```
+
+**Step 3 — generate.** Send to Claude via the Anthropic SDK:
+
+```python
+import anthropic
+claude = anthropic.Anthropic()
+resp = claude.messages.create(
+    model="claude-sonnet-4-6",
+    max_tokens=400,
+    messages=[{"role": "user", "content": prompt}],
+)
+print(resp.content[0].text)
+```
+
+**Step 4 — answer (grounded + cited):**
+
+> *"For an affordable family home in Lahore, listing [1] is a 3-bed condo downtown at $500k with a balcony and parking. Listing [2] is a larger 5-bed villa in the suburbs at $1.2M."*
+
+Notice three things: the model used only the supplied chunks, it cited which one each fact came from, and you can swap in fresh listings tomorrow without touching the model.
+
+## At-a-glance
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant E as Embedding model<br/>(voyage-3)
+    participant V as Vector DB<br/>(ChromaDB)
+    participant L as Claude<br/>(Anthropic SDK)
+
+    Note over V: Index time:<br/>chunks already embedded and stored
+    U->>E: question text
+    E->>V: query vector
+    V-->>E: top-k chunks + metadata
+    E->>L: prompt = system + context + question
+    L-->>U: grounded answer + citations
+```
+
+## Why this matters
+- Three of the LLM's biggest weaknesses — private data, fresh data, large data — are all fixed by RAG without any retraining.
+- Indexing is a script that runs in minutes; fine-tuning is a GPU bill and a release process.
+- Citations make the answer auditable, which is what unlocks legal, medical, and finance use cases.
+- It is the dominant pattern in 2025 production AI; mastering RAG is mastering 80% of the job.
+
+---
+
 ## 1. The RAG pattern in one diagram
 
 ```
@@ -287,3 +376,53 @@ For first prototypes: run 30 queries by hand, score answer quality 1-5.
 - [ ] State 4 RAGAS metrics.
 - [ ] Build a minimal RAG with ChromaDB + OpenAI in 30 lines.
 - [ ] When use RAG vs fine-tuning vs long-context stuffing?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| RAG | Retrieval-Augmented Generation: retrieve relevant chunks, then generate an answer from them. |
+| Retrieval | The lookup step that fetches the top-k most relevant chunks for a query. |
+| Generation | The LLM step that turns retrieved chunks plus the question into an answer. |
+| Chunk | A short passage of text — the unit you embed, store, and retrieve. |
+| Chunking | Splitting source documents into chunks. |
+| Overlap | Repeating a few tokens at chunk boundaries so a fact never gets cut in half. |
+| Embedding | A list of numbers representing the meaning of a chunk or query. |
+| Embedding model | The encoder that produces embeddings (e.g. `voyage-3`). |
+| Vector database | A specialised store for embeddings; bootcamp default is ChromaDB. |
+| ChromaDB | The local, file-based vector DB used throughout this module. |
+| Voyage | The embedding provider Anthropic recommends. |
+| Anthropic SDK | The `anthropic` Python client used to call Claude. |
+| Top-k | Number of chunks returned per query (typical 3-10). |
+| Cosine similarity | Angle-based score that ranks how close two embeddings are. |
+| Context window | The max number of tokens Claude can read in one prompt. |
+| System prompt | Instruction text given to the model before the user message. |
+| Grounding | Constraining the model to answer from the supplied context only. |
+| Citation | Returning which retrieved chunk each claim came from. |
+| Hallucination | The model inventing facts that are not in the context (or anywhere). |
+| Faithfulness | A RAGAS metric: does the answer match the retrieved context? |
+| Context recall | A RAGAS metric: did retrieval pull in the chunks that contain the answer? |
+| Context precision | A RAGAS metric: are the retrieved chunks mostly relevant, not noise? |
+| RAGAS | An evaluation framework for RAG pipelines. |
+| Query rewriting | Asking the LLM to rephrase the user's question so retrieval works better. |
+| HyDE | Hypothetical Document Embeddings: generate a fake answer, embed it, retrieve with it. |
+| Multi-query | Generating several paraphrases of the question and merging their results. |
+| BM25 | Keyword-based retrieval algorithm; complements vector search. |
+| Hybrid search | Running both BM25 and vector search and merging rankings. |
+| Reranker | A slow but accurate model that rescores the top candidates. |
+| Golden set | A small, curated test set of (question, expected answer) pairs used for evaluation. |
+
+## Further reading
+- Previous: [01-vector-databases.md](./01-vector-databases.md)
+- Next (hands-on): [03-chromadb-metadata.md](./03-chromadb-metadata.md)
+- Then (alternatives): [04-fine-tuning.md](./04-fine-tuning.md)
+- Module overview: [../03-rag-vector-databases.md](../03-rag-vector-databases.md)
+- When fine-tuning makes sense instead: [../05-fine-tuning-llms.md](../05-fine-tuning-llms.md)
+- Build the bootcamp project: [../05-projects/01-real-estate-rag.md](../05-projects/01-real-estate-rag.md)
+- Conceptual prequel: [Word embeddings](../../08-nlp/05-word-embeddings.md)
+- ChromaDB — [Docs](https://docs.trychroma.com/)
+- Voyage AI — [Embeddings docs](https://docs.voyageai.com/)
+- Anthropic — [Contextual retrieval](https://www.anthropic.com/news/contextual-retrieval)
+- RAGAS — [Evaluation docs](https://docs.ragas.io/)

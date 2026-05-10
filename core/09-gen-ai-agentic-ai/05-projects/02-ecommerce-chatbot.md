@@ -1,5 +1,68 @@
 # Project 2 — E-Commerce Chatbot (Semantic Routing + DB)
 
+---
+
+## In one sentence
+Build a Claude-powered shop assistant that classifies each incoming message into one of four intents (FAQ, product lookup, recommendation, escalate) and routes it to the right handler — combining vector search for policies with a SQLite tool call for live product data.
+
+## Real-world analogy
+Think of a junior support agent who never sleeps: they read every incoming message, decide whether it's a return question, a "do you have this in red?" question, or an angry "let me talk to a human" — then either answer from the policy binder, look up the catalogue, or hand off to a senior. The chatbot is the same triage on autopilot.
+
+## The intuition (plain English)
+- One giant prompt with all knowledge stuffed in does not scale. Routing first lets each handler specialise.
+- The router is just a small Claude call that returns a JSON `{"intent": "faq" | "product" | "recommend" | "escalate"}`.
+- FAQ-style questions go to RAG over policy docs; product questions become a SQL tool call; ambiguous or angry messages escalate to a human queue.
+- For product lookup, give the model a `query_products` tool with typed parameters — it picks the filters from the user's words and your code runs the SQL.
+- Always have an "escalate" fallback. A bot that gracefully hands off is more trusted than one that fakes confidence.
+
+## Mini worked example — one ReAct loop trace
+
+User asks: *"Find me running shoes under $80."*
+
+```
+step 1  router (Claude)
+        → {"intent": "product"}
+
+step 2  product handler dispatches Claude with tools
+        Claude  : (tool_use) query_products(category="shoes",
+                  name_like="running", max_price=80, in_stock=true)
+        runtime : SQLite query → 3 rows
+        Claude  : "Here are 3 in-stock running shoes under $80:
+                   - Asics Gel-Excite ($69, 4.6★)
+                   - Nike Revolution ($75, 4.4★)
+                   - Adidas Galaxy ($55, 4.5★)"
+```
+
+Two Claude calls (router + answerer), one SQL query, one cited answer.
+
+## At-a-glance
+
+```mermaid
+sequenceDiagram
+    participant U as Shopper
+    participant S as Streamlit chat
+    participant R as Router (Claude)
+    participant H as Product handler (Claude)
+    participant DB as SQLite
+
+    U->>S: "running shoes under $80"
+    S->>R: classify intent
+    R-->>S: {"intent": "product"}
+    S->>H: handle with tools
+    H->>DB: query_products(...)
+    DB-->>H: 3 rows
+    H-->>S: cited recommendation
+    S-->>U: chat reply
+```
+
+## Why this matters
+- E-commerce support is the #1 deployed Gen AI use case in industry; this pattern shows up in every retail vendor pitch.
+- Semantic routing + tool use is the canonical "agent meets database" pattern — interview gold.
+- Clean separation between router and handlers makes the chatbot debuggable and testable per intent (intent accuracy can be benchmarked separately).
+- The escalation path is what makes the bot safe for production; many demos skip it and pay later.
+
+---
+
 ## Domain
 An e-commerce store wants to handle FAQs, product search, and customer help via a chatbot. The bot should:
 - Answer FAQ-style questions about shipping, returns, payment
@@ -281,3 +344,45 @@ ecommerce-chatbot/
 - [ ] Does the eval suite include intent + outcome accuracy?
 - [ ] Streamlit demo deployed?
 - [ ] LinkedIn post with demo + lessons learned?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| Intent | The category of what the user wants (FAQ, product, recommend, escalate). |
+| Semantic router | A classifier that maps a message to one intent using embeddings or an LLM. |
+| Embedding-based routing | Pre-embed example phrases per intent; route by nearest neighbour. |
+| LLM-based routing | Ask a small Claude call to return a JSON intent label. |
+| Handler | The function dedicated to one intent. |
+| FAQ retrieval | RAG over a small set of policy documents. |
+| Tool use | The LLM emitting a function-call request your runtime executes. |
+| `query_products` | The SQL-backed tool the LLM can call to look up the catalogue. |
+| Tool schema | JSON Schema describing the tool's parameters and types. |
+| SQLite | A file-backed SQL database; perfect for bootcamp projects. |
+| ChromaDB | The vector store used for FAQ retrieval. |
+| Escalation | Handing the conversation to a human queue. |
+| Fallback | The safe default when the router is unsure. |
+| Intent accuracy | Fraction of test messages classified into the right intent. |
+| Outcome accuracy | Fraction of conversations that ended with the right result. |
+| Multi-turn memory | Storing the chat history so follow-ups make sense. |
+| `chat_input` / `chat_message` | Streamlit primitives for chat UIs. |
+| Refund tool | A side-effect tool that should require user confirmation before firing. |
+| Idempotency token | Identifier that prevents the same action from running twice. |
+| LLM-as-judge | A stronger LLM scoring chat outcomes against a rubric. |
+| A/B test | Run two prompts in parallel and measure which converts better. |
+| PII | Personally identifiable information — redact in logs. |
+
+## Further reading
+- Module overview: [../README.md](../README.md)
+- Project 1 — RAG over listings: [01-real-estate-rag.md](./01-real-estate-rag.md)
+- Project 3 — agentic onboarding with MCP: [03-agentic-onboarding-mcp.md](./03-agentic-onboarding-mcp.md)
+- Project 4 — production agent on AgentCore: [04-customer-care-agentcore.md](./04-customer-care-agentcore.md)
+- Tool use with Claude: [../04-agents-tool-use.md](../04-agents-tool-use.md)
+- RAG concepts: [../03-rag-vector-databases.md](../03-rag-vector-databases.md)
+- Building with Claude SDK: [../06-langchain-claude-api.md](../06-langchain-claude-api.md)
+- Evaluating chatbots: [../07-evaluation-llm-apps.md](../07-evaluation-llm-apps.md)
+- LangGraph for stateful chats: [../03-orchestration/02-langgraph.md](../03-orchestration/02-langgraph.md)
+- LangChain primer: [../03-orchestration/01-langchain.md](../03-orchestration/01-langchain.md)
+- Anthropic — [Tool use with Claude](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)

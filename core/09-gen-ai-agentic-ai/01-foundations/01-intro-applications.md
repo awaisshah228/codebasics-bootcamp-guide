@@ -7,6 +7,82 @@
 
 ---
 
+## In one sentence
+**Generative AI** writes things for you (text, code, images), **Agentic AI** does things for you (plans, calls tools, takes actions) — and modern apps stitch both together on top of an LLM.
+
+## Real-world analogy
+Generative AI is the **ghostwriter** who drafts the email when you describe it. Agentic AI is the **executive assistant** who reads the email, books the flight, files the expense report, and only checks back in when something needs your decision.
+
+## The intuition (plain English)
+- A **Large Language Model (LLM)** is the engine — give it text, get text back.
+- **Generative AI** wraps that engine in a "produce content" interface — chatbot, code completion, image caption, summary.
+- **Agentic AI** wraps the same engine in a "decide and act" loop — the model picks a tool, you run it, the model sees the result and decides what to do next.
+- Building either is the same recipe: pick a model, write a prompt, wire in retrieval (RAG) and tools as needed, then evaluate, ship, and watch the bill.
+- Almost every "AI app" you see in 2026 is a thin orchestration layer sitting on top of one or two API calls.
+
+## Mini worked example — the two flavors, side by side
+
+**Generative AI call** — one prompt, one response, no actions:
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+resp = client.messages.create(
+    model="claude-sonnet-4-6",
+    max_tokens=300,
+    messages=[{"role": "user", "content": "Write a 3-line apology email for a late shipment."}],
+)
+print(resp.content[0].text)
+```
+
+**Agentic AI call** — same model, but it can request tools:
+
+```python
+tools = [{
+    "name": "lookup_order",
+    "description": "Look up an order by ID",
+    "input_schema": {"type": "object", "properties": {"order_id": {"type": "string"}}, "required": ["order_id"]},
+}]
+
+resp = client.messages.create(
+    model="claude-sonnet-4-6",
+    max_tokens=512,
+    tools=tools,
+    messages=[{"role": "user", "content": "Where is my order #A-123 and when will it arrive?"}],
+)
+# resp may contain a tool_use block: lookup_order(order_id="A-123")
+# you run the real lookup, return tool_result, model writes the customer-facing reply
+```
+
+The model is identical. The wrapper around it decides whether you have a writer or a worker.
+
+## At-a-glance
+
+```mermaid
+flowchart TB
+    U[User request] --> APP[Your app]
+    APP --> LLM[LLM API call<br/>claude-sonnet-4-6]
+    LLM -->|text only| GEN[Generative AI<br/>summary / draft / code]
+    LLM -->|tool_use blocks| LOOP{Agent loop}
+    LOOP --> T1[Run tool: search]
+    LOOP --> T2[Run tool: SQL]
+    LOOP --> T3[Run tool: send email]
+    T1 --> LLM
+    T2 --> LLM
+    T3 --> LLM
+    LOOP -->|final answer| OUT[Reply to user]
+    GEN --> OUT
+```
+
+## Why this matters
+- Knowing the Gen AI vs Agentic AI split tells you which **architecture** to reach for on day one.
+- The "AI engineer stack" in section 6 is the map for the rest of this module — every later folder zooms into one box.
+- Costs, failures, and latency live at the API layer, not in your Python — design with that in mind.
+- Most production wins come from picking the right *cheap* model and adding retrieval, not from a fancier model.
+
+---
+
 ## 1. Generative AI vs Agentic AI
 
 ### Generative AI
@@ -191,3 +267,43 @@ For local: **Ollama** runs Llama-3.1 8B on a 16GB Mac just fine.
 - [ ] Free LLM APIs you can use right now?
 - [ ] What's the #1 production pitfall to avoid?
 - [ ] How do you store an API key safely?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Gen AI** | Generative AI — systems that produce content (text, image, audio, video, code). |
+| **Agentic AI** | Systems that use an LLM to plan and execute multi-step actions via tools. |
+| **LLM** | Large Language Model — a transformer trained on huge text corpora to predict the next token. |
+| **Token** | Subword chunk the model reads and writes; ~4 English characters on average. |
+| **API LLM** | A model accessed over HTTP from a vendor (Claude, GPT, Gemini). |
+| **Open model** | A model with public weights you can run locally (Llama, Mistral, Qwen, Phi). |
+| **System prompt** | High-priority instructions that set the assistant's role and rules. |
+| **User prompt** | The variable input from the human for a given turn. |
+| **Tool / function calling** | Mechanism for the model to emit structured JSON requesting your code run a function. |
+| **RAG** | Retrieval-Augmented Generation — fetch relevant docs at query time, stuff them into the prompt. |
+| **Orchestration** | Library glue (LangChain, LangGraph, CrewAI, DSPy) that wires LLMs, tools, memory, and routing. |
+| **Embedding** | A fixed-length vector representing a chunk of text; used for similarity search in RAG. |
+| **Vector DB** | Database optimized for nearest-neighbor search over embeddings (Chroma, Pinecone, pgvector). |
+| **Memory** | State carried across turns or sessions of an agent (short-term = chat history, long-term = stored facts). |
+| **Eval / observability** | Logging, metrics, and tests that tell you whether the LLM app is actually working. |
+| **Prompt injection** | Attack where instructions hidden in user input or retrieved content hijack the model. |
+| **Hallucination** | A confident but false output from the LLM. |
+| **Streamlit** | Python library that turns scripts into web UIs; common for bootcamp demos. |
+| **FastAPI** | Python framework for serving HTTP APIs; common backend for Gen AI apps. |
+| **Bedrock AgentCore** | AWS managed runtime for hosted agents — used in this bootcamp's projects. |
+| **Anthropic SDK** | The `anthropic` Python package that calls Claude models. |
+| **Claude Sonnet 4.6** | Mid-tier Claude model — the default we use in this bootcamp for quality + cost balance. |
+| **Ollama** | Tool that runs open-source models locally on your laptop. |
+| **Latency** | Wall-clock time from request to final token; LLM calls are typically 200ms–10s. |
+
+## Further reading
+- Next: [02-llm-fundamentals.md](./02-llm-fundamentals.md)
+- Module overview: [../01-llm-fundamentals.md](../01-llm-fundamentals.md)
+- Prompt design: [../02-prompt-engineering.md](../02-prompt-engineering.md)
+- Production evaluation: [../07-evaluation-llm-apps.md](../07-evaluation-llm-apps.md)
+- Transformer math behind every LLM: [../../07-deep-learning/04-sequence/03-transformer-architecture.md](../../07-deep-learning/04-sequence/03-transformer-architecture.md)
+- Style guide for these notes: [../../../BEGINNER-STYLE-GUIDE.md](../../../BEGINNER-STYLE-GUIDE.md)
+- Anthropic — [Models overview](https://docs.anthropic.com/en/docs/about-claude/models)

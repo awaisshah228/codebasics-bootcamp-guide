@@ -8,6 +8,61 @@
 
 ---
 
+## In one sentence
+LangChain is a Python library that gives you a standard set of plug-and-play building blocks — prompts, models, parsers, retrievers, memory — so you can wire up an LLM app with a single `|` operator instead of hand-rolling glue code for every project.
+
+## Real-world analogy
+LangChain is **LEGO bricks for LLM apps**. The Claude SDK gives you raw plastic; LangChain gives you bricks with standard studs (a prompt brick, a model brick, a parser brick) so you can snap together a RAG chatbot in 25 lines and rip out one brick (swap Claude for GPT) without rebuilding the whole castle.
+
+## The intuition (plain English)
+- A Gen AI app is almost never a single LLM call. You **format a prompt**, **call the model**, **parse the output**, often **retrieve context** first, sometimes **remember chat history**.
+- LangChain names each of those steps and gives them a uniform interface: every step is a `Runnable` you can `.invoke(input)` on.
+- The killer feature is **LCEL** (LangChain Expression Language): `prompt | llm | parser` reads left-to-right like a Unix pipe and Just Works for streaming, async, and batching.
+- You stay close to vanilla Python — no DSL, no YAML config, no hidden state. Each piece is debuggable.
+- Pair it with `ChatAnthropic` to keep Claude as your model and you have a production-ready scaffold in minutes.
+
+## Mini worked example — a 5-line LCEL pipeline
+
+```python
+from langchain_anthropic import ChatAnthropic
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+chain = (
+    ChatPromptTemplate.from_template("Translate to {language}: {text}")
+    | ChatAnthropic(model="claude-sonnet-4-6", temperature=0)
+    | StrOutputParser()
+)
+
+print(chain.invoke({"language": "French", "text": "Hello, world!"}))
+# -> "Bonjour, le monde !"
+```
+
+Three components, one pipe operator, runnable end-to-end. Add a retriever in front and you have RAG; add a tool node behind and you have an agent.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    I[Input dict<br/>{question, ...}] --> P[ChatPromptTemplate<br/>fills variables]
+    P --> L[ChatAnthropic<br/>calls Claude API]
+    L --> O[OutputParser<br/>str / JSON / Pydantic]
+    O --> R[Result]
+    RT[Retriever<br/>vector store] -.optional.-> P
+    M[Memory<br/>chat history] -.optional.-> P
+
+    classDef opt stroke-dasharray: 5 5
+    class RT,M opt
+```
+
+## Why this matters
+- LangChain is the most common scaffold in production Gen AI code today — knowing it is table stakes.
+- LCEL chains stream, retry, and trace for free; rolling your own pipeline means re-implementing each.
+- **Pick LangChain when** your app has 3+ steps (retrieve → prompt → parse) or you want provider portability.
+- **Pick the plain SDK** ([../06-langchain-claude-api.md](../06-langchain-claude-api.md)) for one-shot calls; **pick LangGraph** ([02-langgraph.md](./02-langgraph.md)) when you need branches, loops, or human-in-the-loop pauses.
+
+---
+
 ## 1. What LangChain is (and isn't)
 
 LangChain is a **composition framework** for LLM apps. It provides:
@@ -264,3 +319,48 @@ LangChain is great for **typical** RAG / chain patterns. Not always optimal for 
 - [ ] When do you drop LangChain for direct API calls?
 - [ ] What's LangSmith and why use it?
 - [ ] When prefer LangGraph over LangChain?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| LangChain | Python library for composing LLM apps from standard building blocks. |
+| LangChain Core | The base abstractions package: `Runnable`, prompts, parsers. |
+| LangChain Community | Optional integrations (vector stores, loaders, third-party tools). |
+| `langchain-anthropic` | The package that wires Claude into LangChain. |
+| `ChatAnthropic` | LangChain wrapper around the Claude API. |
+| LCEL | LangChain Expression Language — the `prompt \| llm \| parser` pipe syntax. |
+| Runnable | Anything you can `.invoke(input)` on; chains are runnables. |
+| `ChatPromptTemplate` | Reusable prompt with `{variable}` placeholders. |
+| Prompt template | A string with placeholders that becomes a `messages` array at runtime. |
+| Output parser | Converts the model's text into a typed Python object. |
+| `StrOutputParser` | Parser that just pulls the string out of the response. |
+| `JsonOutputParser` | Parser that decodes JSON output into a dict. |
+| `PydanticOutputParser` | Parser that validates output against a Pydantic schema. |
+| `with_structured_output` | Shortcut method for typed extraction on newer models. |
+| `RunnablePassthrough` | Pass an input through unchanged (useful in parallel branches). |
+| `RunnableLambda` | Wrap a plain Python function so it fits in a chain. |
+| `RunnableParallel` | Run multiple chains side-by-side and collect results in a dict. |
+| Retriever | Object with `.get_relevant_documents(query)` — the RAG fetch step. |
+| Vector store | Wrapper around a vector DB (Chroma, FAISS, Pinecone). |
+| RAG | Retrieval-Augmented Generation — fetch context, then prompt. |
+| Memory | Mechanism to carry chat history or facts across calls. |
+| `RunnableWithMessageHistory` | LangChain helper to attach per-session history to a chain. |
+| Tool | A callable the LLM can request via tool use / function calling. |
+| `bind_tools` | Attach a tool list to a model so it can emit tool calls. |
+| `.invoke` / `.stream` / `.batch` | One-shot / streaming / parallel chain execution. |
+| LangSmith | LangChain's hosted tracing and observability product. |
+| LangGraph | LangChain's state-machine framework for agents (covered next). |
+| Provider portability | Swapping the underlying model (Claude, GPT, Gemini) without rewriting app code. |
+
+## Further reading
+- Next in module: [02-langgraph.md](./02-langgraph.md) — when chains aren't enough
+- Sibling: [03-crewai.md](./03-crewai.md), [04-mcp.md](./04-mcp.md), [05-amazon-bedrock-agentcore.md](./05-amazon-bedrock-agentcore.md)
+- Companion: [../06-langchain-claude-api.md](../06-langchain-claude-api.md) — LangChain anchored on the Claude SDK
+- Foundation: [../04-agents-tool-use.md](../04-agents-tool-use.md) — what tools and agents really are
+- Project: [../05-projects/03-agentic-onboarding-mcp.md](../05-projects/03-agentic-onboarding-mcp.md), [../05-projects/04-customer-care-agentcore.md](../05-projects/04-customer-care-agentcore.md)
+- LangChain — [Conceptual guide](https://python.langchain.com/docs/concepts/)
+- LangChain — [LCEL docs](https://python.langchain.com/docs/expression_language/)
+- LangChain — [`ChatAnthropic` reference](https://python.langchain.com/docs/integrations/chat/anthropic/)

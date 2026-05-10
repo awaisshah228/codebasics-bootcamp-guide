@@ -5,6 +5,77 @@
 
 ---
 
+## In one sentence
+A **vector database** stores chunks of text as lists of numbers (embeddings) so you can find documents that *mean* the same thing as a query, not just share keywords.
+
+## Real-world analogy
+Think of a real-estate site. A keyword search for "cozy two-bed near downtown" misses a listing that says "compact 2-bedroom condo close to city centre" — same meaning, no shared words. A vector DB places both phrases in nearly the same spot on a giant invisible map of meaning, so a query lands on its true neighbours regardless of wording.
+
+## The intuition (plain English)
+- An **embedding model** turns any sentence into a fixed-length list of numbers (e.g. 1024 floats). Sentences with similar meaning get similar lists.
+- A **vector database** is a specialised store for billions of those lists with a fast index that finds the nearest neighbours of a new query in milliseconds.
+- "Nearest" is measured by **cosine similarity** — the angle between two vectors. Smaller angle = more alike.
+- This is the lookup engine behind every "chat with your docs" product. Once you have it, retrieval-augmented generation (RAG), recommendations, and dedup all become one-liners.
+- The bootcamp default is **ChromaDB** (local, file-based) with **Voyage** embeddings and the **Anthropic SDK** for the language model that reads what you retrieve.
+
+## Mini worked example — three real-estate listings
+
+You manage three listings:
+
+```
+[L1] "3-bed condo, downtown Lahore, $500k, balcony, parking."
+[L2] "5-bed villa, suburbs of Lahore, $1.2M, garden, pool."
+[L3] "Studio near university, Karachi, $800/month, furnished."
+```
+
+Embed each (toy 4-D vectors for illustration):
+
+```
+[L1] -> [0.85, 0.10, 0.20, 0.40]
+[L2] -> [0.70, 0.15, 0.55, 0.55]
+[L3] -> [0.20, 0.75, 0.10, 0.30]
+```
+
+Buyer query: *"affordable city flat in Lahore"* embeds to:
+
+```
+q -> [0.83, 0.18, 0.22, 0.42]
+```
+
+Cosine similarity to each:
+
+```
+sim(q, L1) ≈ 0.99   <- nearest neighbour, return this
+sim(q, L2) ≈ 0.94
+sim(q, L3) ≈ 0.55
+```
+
+The vector DB returns `L1` first. No keyword overlap was needed — only meaning.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    subgraph Index[Index time]
+        D[Listings text] --> E1[Embedding model<br/>voyage-3]
+        E1 --> V[(Vector DB<br/>ChromaDB)]
+    end
+    subgraph Query[Query time]
+        Q[User query] --> E2[Same embedding<br/>model]
+        E2 --> S[ANN search<br/>top-k]
+        V --> S
+        S --> R[Top chunks<br/>+ metadata]
+    end
+```
+
+## Why this matters
+- Keyword search fails on synonyms, typos, and paraphrases. Vector search is robust to all three.
+- It is the storage layer beneath every modern RAG, semantic search, dedup, and recommendation feature.
+- A laptop can hold millions of vectors with ChromaDB — you do not need a cluster to ship a useful product.
+- Once you understand it, swapping ChromaDB for Pinecone or pgvector is a 10-line change.
+
+---
+
 ## 1. Why we need vector databases
 
 Traditional databases search by **exact match** or **keyword**. For modern AI applications, you need **semantic search** — find documents *similar in meaning* to a query, even if no words overlap.
@@ -232,3 +303,50 @@ For bootcamp projects (real-estate listings, e-commerce products, support docs):
 - [ ] What's hybrid search and why is it often better than pure vector?
 - [ ] What's reranking and when add it?
 - [ ] How much disk for 100k 1536-dim vectors?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| Embedding | A fixed-length list of numbers that represents the meaning of a piece of text. |
+| Embedding model | The neural network that produces embeddings (e.g. `voyage-3`, `text-embedding-3-small`). |
+| Vector | A list of numbers; here, the embedding of a chunk. |
+| Dimension | The length of the vector (e.g. 1024 floats). |
+| Vector database | A store optimised for nearest-neighbour search over vectors. |
+| Collection | A named bucket inside a vector DB; like a table. |
+| ChromaDB | The open-source, file-based vector DB used as the bootcamp default. |
+| Pinecone | A managed (cloud) vector database. |
+| pgvector | A Postgres extension that adds vector search to a normal SQL DB. |
+| FAISS | A vector-search library from Meta; runs in-process, not a server. |
+| ANN | Approximate Nearest Neighbour — sub-linear similarity search; ~99% accurate. |
+| HNSW | A graph-based ANN index used by Chroma and others. |
+| IVF / IVF-PQ | Cluster-based ANN indexes used by FAISS and Milvus. |
+| Cosine similarity | Score in [-1, 1] based on the angle between two vectors; 1 is identical direction. |
+| Dot product | Element-wise multiply then sum; equals cosine when vectors are unit-length. |
+| L2 distance | Straight-line (Euclidean) distance between two vectors. |
+| Top-k | The number of nearest chunks returned for a query. |
+| Chunk | A short passage of text that gets embedded and stored as one row. |
+| Chunking | Splitting long documents into chunks before embedding. |
+| Metadata | Extra columns stored alongside each chunk (city, price, date, source URL). |
+| Metadata filter | A `where` clause that narrows search to chunks matching the filter. |
+| BM25 | Classical keyword-based scoring algorithm used in full-text search. |
+| Hybrid search | Combining BM25 keyword search with vector search and merging the rankings. |
+| Reranker | A slower, more accurate model that rescores a small set of top candidates. |
+| Cross-encoder | A model that takes (query, doc) together and outputs one score; used for reranking. |
+| Bi-encoder | A model that embeds query and doc separately; fast, used for retrieval. |
+| Voyage | The embedding provider Anthropic recommends; produces `voyage-3` and rerankers. |
+| Anthropic SDK | The Python client for calling Claude (`anthropic.Anthropic()`). |
+| Index | The data structure inside the vector DB that makes nearest-neighbour search fast. |
+
+## Further reading
+- Next in this RAG mini-module: [02-rag-fundamentals.md](./02-rag-fundamentals.md)
+- Hands-on next: [03-chromadb-metadata.md](./03-chromadb-metadata.md)
+- Module overview: [../03-rag-vector-databases.md](../03-rag-vector-databases.md)
+- When to fine-tune instead: [../05-fine-tuning-llms.md](../05-fine-tuning-llms.md)
+- The bootcamp project that uses this: [../05-projects/01-real-estate-rag.md](../05-projects/01-real-estate-rag.md)
+- Conceptual prequel: [Word embeddings](../../08-nlp/05-word-embeddings.md) — sentence embeddings are the contextual generalisation
+- ChromaDB — [Docs](https://docs.trychroma.com/)
+- Voyage AI — [Embeddings docs](https://docs.voyageai.com/)
+- Anthropic — [Contextual retrieval](https://www.anthropic.com/news/contextual-retrieval)

@@ -5,6 +5,66 @@
 
 ---
 
+## In one sentence
+MCP (Model Context Protocol) is an open standard from Anthropic that lets any LLM client (Claude Desktop, Cursor, your custom agent) discover and call tools, read data, and use prompt templates from any compliant **MCP server** — write the integration once, every AI tool can use it.
+
+## Real-world analogy
+MCP is **USB-C for LLMs**. Before USB, every device had a unique connector — printers, mice, hard drives all needed their own port. After USB, one socket works for everything. Before MCP, every LLM client (Claude Desktop, ChatGPT, custom agents) needed its own integration with each tool source. After MCP, one server exposes a tool over a standard protocol and every MCP-aware client can plug in.
+
+## The intuition (plain English)
+- Tool-use ([../04-agents-tool-use.md](../04-agents-tool-use.md)) on its own is great, but every framework has its own format. Re-implementing the same Slack tool for Claude Desktop, Cursor, and your bot is wasted work.
+- MCP fixes that. You write an **MCP server** (a small process exposing tools, resources, and prompts), an **MCP client** inside the LLM app discovers what's available, and the LLM picks what to call.
+- Communication is **JSON-RPC** over stdio or HTTP/SSE. The LLM never speaks MCP directly — the host app translates between MCP and the model's tool-use format.
+- The four primitives — **tools** (callable functions), **resources** (read-only data URIs), **prompts** (named templates), **sampling** (server asks the client's LLM to generate) — cover almost any integration shape.
+- This is the protocol behind the bootcamp's HR onboarding project ([../05-projects/03-agentic-onboarding-mcp.md](../05-projects/03-agentic-onboarding-mcp.md)).
+
+## Mini worked example — expose a tool via an MCP server
+
+```python
+# server.py
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("HR System")
+
+@mcp.tool()
+def create_user(email: str, role: str) -> dict:
+    """Create a new user in the HR system."""
+    return {"user_id": "u123", "email": email, "role": role, "status": "created"}
+
+@mcp.resource("config://policies")
+def get_policies() -> str:
+    """Read the company onboarding policy doc."""
+    return open("policies.md").read()
+
+if __name__ == "__main__":
+    mcp.run()                 # stdio transport by default
+```
+
+Point Claude Desktop at this file via `claude_desktop_config.json` and Claude can now call `create_user` and read the policies resource on demand — no extra glue code.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    U[User] --> H[MCP Client / Host<br/>Claude Desktop, Cursor,<br/>your Python app]
+    H <-->|JSON-RPC| S1[MCP Server 1<br/>HR System]
+    H <-->|JSON-RPC| S2[MCP Server 2<br/>Filesystem]
+    H <-->|JSON-RPC| S3[MCP Server 3<br/>Postgres]
+    H --> L[Claude API<br/>tool_use format]
+    L --> H
+    S1 --> A1[(HR API)]
+    S2 --> A2[(Files)]
+    S3 --> A3[(DB)]
+```
+
+## Why this matters
+- MCP eliminates the "N clients × M tools" integration explosion. Build one server, plug into many clients.
+- **Pick MCP when** you want tools to be reusable across Claude Desktop, IDEs, and your own agents — or when consuming community-built servers (GitHub, Slack, Postgres) saves you weeks.
+- **Skip MCP** for a one-off script or a single closed agent — direct tool use ([../04-agents-tool-use.md](../04-agents-tool-use.md)) is fewer lines.
+- It composes with everything else in this folder: a LangChain ([01-langchain.md](./01-langchain.md)) chain, a LangGraph ([02-langgraph.md](./02-langgraph.md)) agent, or a CrewAI ([03-crewai.md](./03-crewai.md)) crew can all call MCP tools, and AgentCore Gateway ([05-amazon-bedrock-agentcore.md](./05-amazon-bedrock-agentcore.md)) hosts them at scale.
+
+---
+
 ## 1. What MCP is — in one sentence
 
 **MCP is a standardized way for LLMs to talk to tools and data sources** — like USB-C for AI integrations.
@@ -242,3 +302,50 @@ For HR / customer data: extra care. Production MCP servers should require proper
 - [ ] How do you call MCP from Python code with Anthropic SDK?
 - [ ] Three security considerations for MCP servers.
 - [ ] How is MCP used in the HR onboarding project?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| MCP | Model Context Protocol — open standard for LLM-to-tool/data integrations. |
+| MCP server | A process that exposes tools, resources, and prompts via MCP. |
+| MCP client | The LLM-side library inside a host app that talks to servers. |
+| MCP host | The app embedding the client (Claude Desktop, Cursor, your code). |
+| JSON-RPC | The wire format MCP uses — JSON messages with method names. |
+| stdio transport | Process talks over standard input/output (default for local servers). |
+| SSE / HTTP transport | Server-Sent Events transport for remote MCP servers. |
+| Tool | A callable function exposed by a server, with name + JSON-Schema input. |
+| Resource | A read-only data source identified by a URI (e.g., `config://policies`). |
+| Prompt | A named, reusable prompt template the user can invoke. |
+| Sampling | A server primitive that asks the client's LLM to generate text. |
+| Capability | One of the four primitive types a server can expose (tool/resource/prompt/sampling). |
+| Discovery | The handshake where a client lists a server's capabilities at connect time. |
+| FastMCP | High-level Python helper for writing MCP servers with decorators. |
+| `@mcp.tool()` | Decorator that registers a Python function as an MCP tool. |
+| `@mcp.resource(uri)` | Decorator that registers a function as an MCP resource. |
+| `ClientSession` | The Python client object for talking to a server. |
+| `StdioServerParameters` | Config object for launching a local MCP server over stdio. |
+| `list_tools` / `call_tool` | Client methods to enumerate and invoke server tools. |
+| `claude_desktop_config.json` | Config file where Claude Desktop registers MCP servers. |
+| Tool namespace | Prefix on tool names to avoid collisions across servers (`hr_create_user`). |
+| Prompt injection | Hostile instructions hidden in tool output or resource content. |
+| Allowlist | Per-client list of which tools may be called. |
+| Sandbox | Isolated execution environment for risky tools (filesystem, code). |
+| Audit log | Persistent record of every tool call, who made it, and the result. |
+| Pydantic validation | Schema checking on tool inputs to reject malformed calls. |
+| AgentCore Gateway | AWS-managed MCP-compliant tool host (covered in [05-amazon-bedrock-agentcore.md](./05-amazon-bedrock-agentcore.md)). |
+| Anthropic | The company that introduced MCP and maintains the spec with the community. |
+
+## Further reading
+- Previous: [03-crewai.md](./03-crewai.md) — multi-agent crews that consume MCP tools
+- Next: [05-amazon-bedrock-agentcore.md](./05-amazon-bedrock-agentcore.md) — managed MCP hosting via AgentCore Gateway
+- Sibling: [01-langchain.md](./01-langchain.md), [02-langgraph.md](./02-langgraph.md)
+- Foundation: [../04-agents-tool-use.md](../04-agents-tool-use.md) — tool-use mechanics underneath MCP
+- Companion: [../06-langchain-claude-api.md](../06-langchain-claude-api.md) — calling Claude with tool_use blocks
+- Project: [../05-projects/03-agentic-onboarding-mcp.md](../05-projects/03-agentic-onboarding-mcp.md) — capstone using MCP
+- Anthropic — [Model Context Protocol home](https://modelcontextprotocol.io/)
+- MCP — [Specification](https://spec.modelcontextprotocol.io/)
+- MCP — [Server registry / awesome list](https://github.com/modelcontextprotocol/servers)
+- Directory: [https://www.mcp.so](https://www.mcp.so)

@@ -6,6 +6,78 @@
 
 ---
 
+## In one sentence
+**ChromaDB** is a small, local vector database that stores chunks plus side-info (`city`, `price`, `date`), and **metadata filtering** lets you say *"only search inside the rows that match these conditions"* before semantic search runs.
+
+## Real-world analogy
+A real-estate site search. Pure semantic search is like asking the agent "find me something cosy" — they will return any cosy listing on the planet. Metadata filtering is the side panel: *city = Lahore*, *price ≤ ₨600k*, *bedrooms ≥ 3*. The agent now searches only inside that bucket. Metadata is the side panel; embeddings are the meaning.
+
+## The intuition (plain English)
+- Every chunk you store in ChromaDB can carry a small dictionary of attributes — that is the **metadata**.
+- At query time, you supply a `where` clause that narrows the candidate set first; semantic search runs only on what is left.
+- This combination — **filter then rank by meaning** — beats pure vector search in almost every real product.
+- ChromaDB exposes Mongo-style operators (`$lt`, `$gte`, `$in`, `$and`, `$or`) so the filter can be as rich as a SQL `WHERE`.
+- It is the single highest-leverage upgrade you can apply to a RAG prototype.
+
+## Mini worked example — metadata filter on listings
+
+You stored three real-estate listings with metadata:
+
+```python
+col.add(
+    documents=[
+        "3-bed condo, downtown Lahore, balcony, parking.",
+        "5-bed villa, suburbs of Lahore, garden, pool.",
+        "Studio near university, Karachi, furnished.",
+    ],
+    metadatas=[
+        {"city": "Lahore",  "type": "condo",  "bedrooms": 3, "price": 500000},
+        {"city": "Lahore",  "type": "villa",  "bedrooms": 5, "price": 1200000},
+        {"city": "Karachi", "type": "studio", "bedrooms": 0, "price": 800},
+    ],
+    ids=["L1", "L2", "L3"],
+)
+```
+
+Naive semantic search for *"affordable family home"* might rank `L2` high because the embedding finds "5-bed villa, garden" semantically familial, even though the price is way over budget.
+
+Add a metadata filter:
+
+```python
+col.query(
+    query_texts=["affordable family home"],
+    n_results=2,
+    where={"$and": [
+        {"city": "Lahore"},
+        {"bedrooms": {"$gte": 3}},
+        {"price": {"$lte": 600000}},
+    ]},
+)
+```
+
+Now ChromaDB first restricts to rows where `city == "Lahore" AND bedrooms >= 3 AND price <= 600000` — only `L1` survives. Semantic ranking happens inside that one-row pool. Result: a single, on-budget recommendation.
+
+That is the production pattern: filter cuts the haystack; embeddings find the needle inside it.
+
+## At-a-glance
+
+```mermaid
+flowchart TD
+    Q[User query +<br/>filters] --> F[Apply metadata<br/>where clause]
+    F --> P[(Candidate pool<br/>matching rows)]
+    P --> A[ANN search<br/>top-k by cosine]
+    A --> R[Top-k chunks<br/>+ metadata]
+    R --> L[Claude prompt<br/>via Anthropic SDK]
+```
+
+## Why this matters
+- Without filtering, a model recommending a $1.2M villa to a $600k buyer is a normal RAG failure mode.
+- Metadata is free. You almost always have it (city, date, author, source URL); store it the day you ingest.
+- Filtering scales sub-linearly — the smaller the candidate pool, the faster the ANN search.
+- It is the cheapest way to add domain rules (regulatory, tenant isolation, freshness) without changing your model.
+
+---
+
 ## 1. Why ChromaDB for the bootcamp
 
 - Pure-Python install
@@ -262,3 +334,50 @@ For bootcamp projects (a few thousand listings / chunks), you'll never feel a li
 - [ ] When outgrow Chroma — what next?
 - [ ] How do I update a listing's price after it changes?
 - [ ] Delete all vectors with `city=Karachi`.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| ChromaDB | The local, file-based vector database used as the bootcamp default. |
+| Client | The Python object that talks to a ChromaDB instance (`Client`, `PersistentClient`, `HttpClient`). |
+| In-memory client | A ChromaDB session that lives only in RAM and disappears on exit. |
+| PersistentClient | A ChromaDB session that saves data to disk under a path. |
+| HttpClient | Connects to a ChromaDB server over the network. |
+| Collection | A named bucket inside ChromaDB; the rough equivalent of a SQL table. |
+| Document | The text of one chunk stored in a collection. |
+| ID | The unique key for a row (`"L1"`, `"L2"`...). |
+| Metadata | A small dictionary of attributes attached to a chunk (city, price, date). |
+| Metadata filter | A `where` clause that narrows search to chunks matching given conditions. |
+| Where-document filter | A `where_document` clause that filters by substrings inside the text. |
+| `$eq` / `$ne` | Equality / inequality operators in metadata filters. |
+| `$gt` / `$gte` / `$lt` / `$lte` | Numeric comparison operators in metadata filters. |
+| `$in` / `$nin` | "Is in this list" / "is not in this list" operators. |
+| `$and` / `$or` | Logical combiners that join multiple filter conditions. |
+| `$contains` | Substring match used inside `where_document`. |
+| Embedding function | The callable ChromaDB uses to turn text into vectors at add/query time. |
+| `OpenAIEmbeddingFunction` | Built-in adapter that calls OpenAI for embeddings. |
+| `voyage-3` | The embedding model recommended for use with Anthropic's Claude. |
+| `all-MiniLM-L6-v2` | The 384-d default local embedder ChromaDB ships with. |
+| `hnsw:space` | Collection setting that picks the distance metric (`cosine`, `l2`, `ip`). |
+| HNSW | The graph-based ANN index ChromaDB uses internally. |
+| `add` | Insert documents (and embed them, if no embeddings supplied). |
+| `query` | Retrieve top-k chunks for one or more query texts. |
+| `update` | Change an existing row by ID. |
+| `upsert` | Insert if missing, update if present. |
+| `delete` | Remove rows by IDs or by a `where` filter. |
+| Anthropic SDK | The `anthropic` Python client used to call Claude on the retrieved chunks. |
+
+## Further reading
+- Previous: [02-rag-fundamentals.md](./02-rag-fundamentals.md)
+- Next: [04-fine-tuning.md](./04-fine-tuning.md)
+- Module overview: [../03-rag-vector-databases.md](../03-rag-vector-databases.md)
+- When to fine-tune instead: [../05-fine-tuning-llms.md](../05-fine-tuning-llms.md)
+- Apply this in the bootcamp project: [../05-projects/01-real-estate-rag.md](../05-projects/01-real-estate-rag.md)
+- Conceptual prequel: [Word embeddings](../../08-nlp/05-word-embeddings.md)
+- ChromaDB — [Documentation](https://docs.trychroma.com/)
+- ChromaDB — [Where filters reference](https://docs.trychroma.com/docs/querying-collections/metadata-filtering)
+- Voyage AI — [Embeddings docs](https://docs.voyageai.com/)
+- Anthropic — [Python SDK](https://github.com/anthropics/anthropic-sdk-python)

@@ -1,5 +1,79 @@
 # Project 4 — Customer Care AI Agent on Bedrock AgentCore
 
+---
+
+## In one sentence
+Build a Claude-powered customer-care agent that runs on **Amazon Bedrock AgentCore** — with per-user identity, persistent memory, sandboxed tools, refund caps, and a 50-scenario eval suite — so the agent autonomously resolves 80% of tickets and gracefully escalates the rest.
+
+## Real-world analogy
+Think of a senior support rep who has read every customer's full history, can pull up bills and outage maps in seconds, can issue small refunds on their own authority, but knows to flag a manager for anything over $50 — and who logs every action so compliance can replay the call later. The agent is that rep, scaled to thousands of conversations at once.
+
+## The intuition (plain English)
+- A telecom or SaaS support inbox is the perfect agent target: predictable tools, repetitive intents, big payoff per ticket deflected.
+- The agent's job is to call the right tool (`get_recent_bill`, `check_service_status`, `issue_refund`, `escalate_to_human`) and explain the result; identity locks each tool to the authenticated customer's data.
+- AgentCore wraps your Claude-via-LangGraph agent with the messy production bits: Cognito auth, per-user memory store, sandboxed code interpreter, audit logs, observability traces.
+- Hard guardrails matter: refunds capped at $50, larger ones return `pending_approval`; jailbreak attempts are refused; PII is redacted in logs.
+- Eval suite of 50 scenarios runs on every deploy; if tool-selection accuracy or escalation rate regresses, the build fails.
+
+## Mini worked example — one ReAct loop trace
+
+User Awais asks: *"Refund my last charge of $25, my internet has been terrible all week."*
+
+```
+turn 1  agent  : check_service_status(user_id="awais")
+                → {outages_last_week: 4, last_outage: "2026-05-08"}
+
+turn 2  agent  : get_recent_bill(user_id="awais")
+                → {amount: 79.00, last_charge: 25.00, charge_date: "2026-05-07"}
+
+turn 3  agent  : issue_refund(user_id="awais", amount=25.00,
+                              reason="documented outages 2026-05-08")
+                → {status: "ok", refund_id: "R-7741"}
+
+turn 4  agent  : "I've confirmed 4 outages in your area last week and
+                  refunded the $25 charge from May 7 (refund R-7741, 3-5
+                  business days). Sorry for the disruption — anything else?"
+                  (end_turn)
+```
+
+Three tools, one autonomous resolution, one logged audit trail. Memory stores "Awais had a refund issued for May outages" so the next conversation starts smarter.
+
+## At-a-glance
+
+```mermaid
+sequenceDiagram
+    participant U as Customer (Awais)
+    participant UI as Streamlit + Cognito
+    participant AC as AgentCore Runtime
+    participant A as Claude agent
+    participant T as Tools (CRM, billing, network)
+    participant M as AgentCore Memory
+
+    U->>UI: "Refund my $25 charge"
+    UI->>AC: signed request (user_id=awais)
+    AC->>M: load short + long-term memory
+    M-->>AC: prior issues, plan tier
+    AC->>A: messages + tools + memory
+    A->>T: check_service_status(awais)
+    T-->>A: outages last week
+    A->>T: get_recent_bill(awais)
+    T-->>A: $25 charge
+    A->>T: issue_refund(awais, $25)
+    T-->>A: ok, refund_id
+    A-->>AC: final answer
+    AC->>M: persist memory
+    AC-->>UI: cited reply
+    UI-->>U: chat response
+```
+
+## Why this matters
+- This is the most enterprise-grade project in the bootcamp: AWS, identity, memory, observability, and safety all in one repo.
+- Recruiters at AI-engineering teams skim resumes for exactly these capabilities. A working AgentCore demo is rare.
+- The pattern (Claude + LangGraph + AgentCore + identity + tool gating) is the template for production agents in finance, telecom, healthcare, and SaaS.
+- Refund caps + escalation flows are how agents survive contact with real customers — this project drills the full safety story.
+
+---
+
 ## Domain
 A telecom / SaaS company has thousands of daily customer-care queries:
 - "What's my bill this month?"
@@ -265,3 +339,50 @@ customer-care-agentcore/
 - [ ] Streamlit UI functional + auth-protected?
 - [ ] 50-scenario eval suite + results in README?
 - [ ] LinkedIn post: "Built a production AI agent on AWS AgentCore — end-to-end demo + lessons"?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| AgentCore | Amazon Bedrock's runtime for hosting production agents with identity, memory, and observability built in. |
+| Bedrock | AWS's managed service for foundation models (Claude available here). |
+| LangGraph | The state-machine framework used to wire the ReAct agent. |
+| `create_react_agent` | LangGraph helper that builds a standard ReAct loop from an LLM + tools. |
+| `ChatBedrock` | LangChain wrapper that calls Claude via Bedrock. |
+| Cognito | AWS's user-auth service; provides per-user OAuth tokens. |
+| Identity context | The authenticated user's ID, available to every tool call. |
+| Auth-scoped tool | A tool that only returns data for the calling user. |
+| Short-term memory | Conversation-turn buffer kept inside one session. |
+| Long-term memory | Per-user facts and preferences persisted across sessions. |
+| Memory strategy | The config that says what to remember and for how long. |
+| Sandboxed Code Interpreter | A managed Python environment the agent can run code in safely. |
+| Sandboxed Browser | A managed headless browser the agent can drive safely. |
+| Observability | Built-in tracing of every tool call, message, latency, and cost. |
+| Trace | The full record of one agent invocation. |
+| Audit log | Persistent record of consequential actions (refunds, escalations). |
+| Refund cap | Hard limit ($50) above which manager approval is required. |
+| Manager approval flow | Pending-approval status returned by the tool until a human signs off. |
+| Escalation | Handing the conversation to a human queue with a context summary. |
+| PII redaction | Stripping personal data from logs before storage. |
+| Rate limit | Max calls per customer per hour. |
+| Jailbreak | An input designed to bypass safety constraints; should be refused. |
+| Resolution rate | Fraction of tickets closed without human help. |
+| Eval scenario | One labelled (input, expected_tools, expected_outcome) test case. |
+| Tool-selection accuracy | Did the agent pick the right tools for this scenario? |
+
+## Further reading
+- Module overview: [../README.md](../README.md)
+- Project 1 — RAG over listings: [01-real-estate-rag.md](./01-real-estate-rag.md)
+- Project 2 — chatbot with routing and SQL: [02-ecommerce-chatbot.md](./02-ecommerce-chatbot.md)
+- Project 3 — agentic onboarding with MCP: [03-agentic-onboarding-mcp.md](./03-agentic-onboarding-mcp.md)
+- AgentCore deep dive: [../03-orchestration/05-amazon-bedrock-agentcore.md](../03-orchestration/05-amazon-bedrock-agentcore.md)
+- Agent fundamentals: [../04-agents-tool-use.md](../04-agents-tool-use.md)
+- LangGraph for stateful agents: [../03-orchestration/02-langgraph.md](../03-orchestration/02-langgraph.md)
+- LangChain primer: [../03-orchestration/01-langchain.md](../03-orchestration/01-langchain.md)
+- Building with Claude SDK: [../06-langchain-claude-api.md](../06-langchain-claude-api.md)
+- Eval suites for agents: [../07-evaluation-llm-apps.md](../07-evaluation-llm-apps.md)
+- AWS — [Bedrock AgentCore docs](https://docs.aws.amazon.com/bedrock/latest/userguide/agentcore.html)
+- Anthropic — [Tool use with Claude](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
+- Anthropic — [Building effective agents](https://www.anthropic.com/research/building-effective-agents)

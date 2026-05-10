@@ -264,15 +264,155 @@ This is the visualization that made attention "the new chunked LSTM hidden state
 | Using the same dim for Q/K/V across heads without splitting | head doing nothing | split d_model across heads |
 | Dropout removed from attention weights | risk of overfit on small data | `nn.MultiheadAttention(dropout=0.1)` |
 
+---
+
+## 11. Full attention matrix — visualizing what gets attended to
+
+After all the math, an attention layer produces a `(T × T)` matrix where row `i` shows what fraction of token `i`'s update came from each token. Here's what a typical pattern looks like for the sentence **"the cat sat on the mat"** in a real Transformer head:
+
+```
+                  the   cat   sat   on    the   mat
+                  ────  ────  ────  ────  ────  ────
+   the     ─►    [0.30  0.20  0.15  0.10  0.15  0.10]
+   cat     ─►    [0.10  0.45  0.20  0.05  0.05  0.15]   ← attends to "mat" (the object)
+   sat     ─►    [0.05  0.40  0.30  0.10  0.05  0.10]   ← attends to "cat" (the subject)
+   on      ─►    [0.05  0.10  0.20  0.30  0.10  0.25]
+   the(2)  ─►    [0.20  0.10  0.10  0.10  0.30  0.20]
+   mat     ─►    [0.10  0.30  0.10  0.15  0.10  0.25]   ← attends back to "cat"
+```
+
+Reading row 2: when the model updates the `"cat"` representation, it pulls 45% of the new info from itself, 20% from `"sat"`, and notably 15% from `"mat"` — the model is learning that "cat" and "mat" are related (subject-object across the sentence).
+
+A full Transformer has **`n_layers × n_heads`** of these matrices simultaneously. BERT-base has 12 × 12 = **144 attention heads**, each potentially learning a different relationship.
+
+---
+
+## 12. Causal mask — the `T × T` lower triangle
+
+The mask used in decoder self-attention to prevent peeking at future tokens:
+
+```
+Position:    0    1    2    3    4
+   0        [1    0    0    0    0]    ← can only see itself
+   1        [1    1    0    0    0]    ← can see 0, 1
+   2        [1    1    1    0    0]    ← can see 0, 1, 2
+   3        [1    1    1    1    0]
+   4        [1    1    1    1    1]    ← can see everything before+itself
+
+Apply BEFORE softmax:
+  scores  = scores.masked_fill(mask == 0, -1e9)
+  weights = softmax(scores, dim=-1)        ← masked positions go to ~0
+```
+
+That single triangle is why GPT can generate text but BERT can only score it.
+
+---
+
+## 13. The full self-attention computation in code (for understanding)
+
+This `forward` is mathematically identical to `nn.MultiheadAttention` — read it line by line and you'll never confuse the dims again.
+
+```python
+import torch
+import torch.nn.functional as F
+
+def attention(Q, K, V, mask=None):
+    """
+    Q, K, V: (batch, n_heads, seq_len, d_k)
+    mask:    (batch, 1, seq_len, seq_len)   or None
+    returns: (batch, n_heads, seq_len, d_k)
+    """
+    d_k = Q.size(-1)
+    scores = Q @ K.transpose(-2, -1)            # (B, h, T, T)
+    scores = scores / (d_k ** 0.5)              # scaled dot-product
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, float('-inf'))
+    weights = F.softmax(scores, dim=-1)         # rows sum to 1
+    return weights @ V                          # (B, h, T, d_k)
+```
+
+Add `W_Q`, `W_K`, `W_V` linear layers to project the input into Q, K, V — and an output `W_O` to mix the heads — and you have a full attention layer.
+
+---
+
+## 14. Production attention variants (post-2017)
+
+The 2017 attention algorithm is correct but not what runs in production LLMs anymore. The frontier moved on three axes: **memory**, **speed**, **context length**.
+
+### Memory: MHA → MQA → GQA → MLA
+The KV-cache during generation grows linearly with `n_heads`. Modern variants share K/V across heads:
+
+```
+MHA (original):     each head has independent  K, V       ← 100% memory
+MQA (PaLM):         all heads share         one K, V      ← 1/n_heads memory
+GQA (LLaMA, Mistral): heads share K, V in groups          ← compromise — most quality, much less memory
+MLA (DeepSeek-v2):  K, V compressed to a low-rank latent  ← extreme savings, slight quality cost
+```
+
+### Speed: Flash Attention
+The naive implementation materializes the `(T × T)` score matrix in HBM (slow GPU memory). **Flash Attention** computes attention in tiles that fit in SRAM (fast GPU memory) without ever building the full matrix.
+
+- **Math is identical** — same outputs, same gradients
+- **Speed**: 2-10× faster training and inference
+- **Memory**: linear in sequence length instead of quadratic
+- **Default everywhere now** — PyTorch 2.0+ uses it transparently via `F.scaled_dot_product_attention`
+
+### Context length: sliding window + sparse attention
+For T = 100,000+ tokens, full attention is unaffordable. Tricks:
+
+```
+Full attention:        every token attends to every token   O(T²)
+Sliding window:        each token attends to last W tokens  O(T·W)   ← Mistral, longformer
+Dilated attention:     attends to a strided pattern         O(T·log T)
+Local + global:        most tokens local, few "global" tokens see all  ← BigBird
+State-space hybrids:   replace attention with SSM (Mamba)   O(T)
+```
+
+These are how you get LLMs with 1M+ context windows.
+
+---
+
+## 15. Attention quick reference
+
+```mermaid
+flowchart TB
+    Start[I need to compute attention] --> Q1{Production code?}
+    Q1 -- no, learning --> Manual[Use the manual function in §13<br/>so you see every step]
+    Q1 -- yes --> Q2{Built-in OK?}
+    Q2 -- yes --> Builtin[F.scaled_dot_product_attention<br/>or nn.MultiheadAttention<br/>auto-uses Flash Attention]
+    Q2 -- no, need custom --> HF[HuggingFace transformers' attention impl<br/>or xformers / Flash Attention library]
+```
+
+| You want... | Use this |
+|---|---|
+| To learn the math | hand-roll the function in §13 |
+| Standard PyTorch attention | `F.scaled_dot_product_attention(Q, K, V, attn_mask=mask)` |
+| Multi-head wrapper | `nn.MultiheadAttention(d_model, n_heads, batch_first=True)` |
+| HuggingFace pre-trained model | their `transformers.AutoModel` handles attention internally |
+| Long-context production | `flash-attn` or `xformers` packages |
+| Memory-bound deployment | a model with **GQA** (LLaMA-3, Mistral) |
+
+---
+
 ## Self-check
 
+### Mechanics
 - [ ] Walk through self-attention computation for one token.
 - [ ] What does Q vs K vs V represent intuitively?
 - [ ] Why divide by $\sqrt{d_k}$?
 - [ ] What's the difference between self-attention and cross-attention?
 - [ ] Why use multi-head attention instead of single-head?
 - [ ] What's the masked attention used in decoders for?
+
+### Implementation
 - [ ] Implement scaled dot-product attention from scratch in PyTorch.
+- [ ] Show how the causal mask matrix looks for T=4.
+- [ ] Why is `dim=-1` the right axis for the softmax?
+
+### Production attention (§14)
+- [ ] What's the difference between MHA, MQA, GQA, and MLA?
+- [ ] What problem does Flash Attention solve, and what's its trick?
+- [ ] Name 3 ways production LLMs scale to 100k+ context.
 - [ ] Why is attention O(T²) — and what are some workarounds for long contexts?
 
 ---

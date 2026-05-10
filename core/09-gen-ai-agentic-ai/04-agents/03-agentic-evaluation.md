@@ -5,6 +5,65 @@
 
 ---
 
+## In one sentence
+Agent evaluation is the discipline of grading not just the final answer but also the *path* the agent took to get there — tools, steps, cost, latency — so you can ship changes without breaking what worked.
+
+## Real-world analogy
+Grading an agent is like grading a chess player. "Did you win?" is one question; "Did you make the right moves to win?" is another. A player who blunders into a win and a player who plays a clean line are scored differently, because only one of them is reliable next game. Outcome eval is the win/loss column; trajectory eval is the move-by-move review.
+
+## The intuition (plain English)
+- A single number cannot capture agent quality. You need a small portfolio: outcome correctness, trajectory correctness, cost, latency, safety.
+- Component evals catch boring bugs (retriever returns nothing, JSON malformed). Trajectory evals catch agentic bugs (right answer, wrong tool path). Outcome evals catch the obvious (was the user actually helped?).
+- The cheapest scalable scorer is **LLM-as-judge**: a stronger Claude grades the production agent's outputs against a rubric. You still validate it agrees with humans before trusting it.
+- Lock a small **golden set** (30–100 tasks) and run it on every prompt or model change. Vibe-checking is how regressions ship.
+- For agents, always store the full **trajectory** (every tool call + observation). Without it, you cannot explain failures.
+
+## Mini worked example — one ReAct loop graded three ways
+
+Task: *"Find the next pending onboarding and create their accounts."*
+
+```
+turn 1  agent  : list_pending_onboardings()  → [{id:1, name:"Awais"}]
+turn 2  agent  : create_email_account(name="Awais") → {email, pw}
+turn 3  agent  : send_welcome_email(to=email)        → ok
+turn 4  agent  : "Awais has been onboarded."         (end_turn)
+```
+
+Three lenses on the same trace:
+
+| Eval lens | Question | Score |
+|---|---|---|
+| Component  | Did each tool return a valid shape?               | 3/3 |
+| Trajectory | Did it call `list` before `create`, and skip non-required tools? | pass |
+| Outcome    | LLM-judge vs ideal: "Awais has been onboarded."   | 5/5 |
+
+Add cost + latency from the trace, and you have a five-number scorecard for one task. Run on 10 tasks → averages are your dashboard.
+
+## At-a-glance
+
+```mermaid
+sequenceDiagram
+    participant T as Test runner
+    participant A as Agent under test
+    participant J as LLM-as-judge
+    participant D as Dashboard
+
+    T->>A: golden task input
+    A-->>T: trajectory + final answer
+    T->>J: rubric + ideal + actual
+    J-->>T: score 1-5 + reason
+    T->>T: assertions on trajectory<br/>(tool order, cost cap)
+    T->>D: emit metrics<br/>(outcome, trajectory, cost, latency)
+```
+
+## Why this matters
+- Agents touch real systems. A regression is not "lower BLEU" — it is "double-charged a customer."
+- Every prompt tweak, model upgrade, and tool change risks silent breakage. Evals are how teams move fast without lighting the production agent on fire.
+- Trajectory evals are the agent-specific bit you cannot copy from classic ML. Get them right and you debug 10× faster.
+- Eval discipline is what separates a portfolio demo from a deployable product, and recruiters know the difference.
+
+---
+
 ## 1. Why agent eval is hard
 
 Classical ML eval is easy: you have labels, you compute accuracy. Agent eval is harder because:
@@ -231,3 +290,47 @@ Frameworks: **Garak**, **PyRIT**, **Llama Guard**, custom probe sets.
 - [ ] Build an eval suite for a chatbot.
 - [ ] How do you CI-test a prompt change?
 - [ ] Two safety evals to add for sensitive agents.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| Eval / evaluation | Automated grading of LLM or agent outputs against a fixed test set. |
+| Golden set | A locked set of (input, ideal output) pairs used to score every change. |
+| Component eval | Tests one building block in isolation (retriever, parser, prompt). |
+| Trajectory eval | Inspects the full path an agent took (tools, order, args, observations). |
+| Outcome eval | Scores the final answer or end state. |
+| Trace | The stored record of one agent run — every step, tool call, and message. |
+| Trajectory assertion | A rule the trace must satisfy ("call X before Y", "never call Z"). |
+| LLM-as-judge | Using a stronger LLM to score another LLM's output. |
+| Rubric | The 1–5 scale and criteria the judge applies. |
+| Reference-based eval | Compares candidate output to a known ideal answer. |
+| Reference-free eval | Scores outputs without a reference (faithfulness, helpfulness). |
+| Faithfulness | Does the answer stick to the retrieved context? |
+| Answer relevance | Does the response actually address the question? |
+| Context precision / recall | RAG metrics for retrieval quality. |
+| RAGAS | Library for RAG-specific metrics. |
+| Cohen's kappa | Inter-rater agreement adjusted for chance; how to validate a judge. |
+| LangSmith / Langfuse | Hosted (and open-source) tracing + eval platforms. |
+| DeepEval / Promptfoo | Pytest-style and YAML-driven eval frameworks. |
+| Online eval | Sampling live traffic and grading it in the background. |
+| Drift | Quality changing over time (data, model, or prompt). |
+| Adversarial probe | An input crafted to break, jailbreak, or trick the agent. |
+| PII leakage | The agent revealing personal data it should not. |
+| Cost / latency budget | Per-task ceilings on tokens and seconds; CI fails if exceeded. |
+| SWE-Bench / WebArena / GAIA | Public benchmarks for code, web, and general agents. |
+
+## Further reading
+- Previous in folder: [02-multi-agent-systems.md](./02-multi-agent-systems.md)
+- Folder root: [01-agent-fundamentals.md](./01-agent-fundamentals.md)
+- Module overview: [../04-agents-tool-use.md](../04-agents-tool-use.md)
+- Full eval module: [../07-evaluation-llm-apps.md](../07-evaluation-llm-apps.md)
+- RAG you are evaluating: [../03-rag-vector-databases.md](../03-rag-vector-databases.md)
+- Tracing in LangGraph: [../03-orchestration/02-langgraph.md](../03-orchestration/02-langgraph.md)
+- Building with Claude SDK: [../06-langchain-claude-api.md](../06-langchain-claude-api.md)
+- RAGAS — [Documentation](https://docs.ragas.io/)
+- DeepEval — [GitHub](https://github.com/confident-ai/deepeval)
+- LangSmith — [Docs](https://docs.smith.langchain.com/)
+- Anthropic — [Evaluating prompts](https://docs.anthropic.com/en/docs/test-and-evaluate/develop-tests)

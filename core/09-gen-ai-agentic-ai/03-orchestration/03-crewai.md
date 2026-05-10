@@ -5,6 +5,80 @@
 
 ---
 
+## In one sentence
+CrewAI is a Python framework that lets you build a multi-agent app by describing it like a project team: each agent has a **role**, **goal**, and **backstory**, you hand them **tasks**, and the **crew** runs the work — sequentially or with a manager agent assigning work dynamically.
+
+## Real-world analogy
+CrewAI is **a team of specialists** at a content agency. The Researcher, Writer, Editor, and SEO Specialist each have a job description (role), a quarterly target (goal), and a resume that shapes how they think (backstory). You hand the editor-in-chief a brief; they pass it down the line. LangGraph would model the same flow as a state machine; CrewAI lets you write it the way an HR manager would.
+
+## The intuition (plain English)
+- Many real workflows are naturally **role-based**: research → outline → draft → edit → publish. Modeling each role as its own LLM with its own tools matches how humans already organize the work.
+- A CrewAI **agent** is mostly a structured prompt — `role`, `goal`, `backstory` get woven into the system prompt — plus optional tools and an LLM choice (Claude works fine via the LangChain adapter).
+- A **task** is a specific assignment with a `description`, `expected_output`, and an `agent` who owns it. Tasks can depend on each other via `context=[earlier_task]`.
+- A **crew** runs tasks either **sequentially** (default) or **hierarchically** (a manager agent picks who runs what next).
+- Compared to LangGraph, you trade fine-grained control for fast prototyping when the work decomposes cleanly into roles.
+
+## Mini worked example — 2 agents collaborating
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import SerperDevTool
+
+researcher = Agent(
+    role="Research Analyst",
+    goal="Find 5 recent advances in {topic}",
+    backstory="You read primary sources and cite them precisely.",
+    tools=[SerperDevTool()],
+)
+
+writer = Agent(
+    role="Content Writer",
+    goal="Turn research into a 200-word brief",
+    backstory="A former newsroom editor who cuts jargon.",
+)
+
+research = Task(
+    description="Research recent advances in {topic}",
+    expected_output="5 bullets with sources.",
+    agent=researcher,
+)
+
+write = Task(
+    description="Write a 200-word brief from the research",
+    expected_output="One polished paragraph, no headings.",
+    agent=writer,
+    context=[research],          # downstream dependency
+)
+
+crew = Crew(agents=[researcher, writer], tasks=[research, write], process=Process.sequential)
+print(crew.kickoff(inputs={"topic": "Gen AI agents"}))
+```
+
+Two roles, two tasks, one crew — a working content pipeline in ~25 lines.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    U[User input<br/>{topic}] --> C[Crew]
+    C --> R[Researcher Agent<br/>role + goal + backstory<br/>tools: web search]
+    R --> W[Writer Agent<br/>role + goal + backstory]
+    W --> O[Final output]
+    M[Manager Agent<br/>Process.hierarchical] -.optional.-> R
+    M -.optional.-> W
+
+    classDef opt stroke-dasharray: 5 5
+    class M opt
+```
+
+## Why this matters
+- **Pick CrewAI when** the workflow decomposes cleanly into roles (research / write / review / publish), or when you want a quick multi-agent prototype without learning a graph DSL.
+- **Pick LangGraph ([02-langgraph.md](./02-langgraph.md))** when you need explicit branching, retries, or human-in-the-loop pauses — control flow that CrewAI hides.
+- **Pick LangChain ([01-langchain.md](./01-langchain.md))** for single-LLM pipelines with no agent collaboration.
+- The HR onboarding project ([../05-projects/03-agentic-onboarding-mcp.md](../05-projects/03-agentic-onboarding-mcp.md)) uses CrewAI plus MCP tools — a good fit because onboarding is a sequence of role-driven steps.
+
+---
+
 ## 1. What CrewAI is
 
 CrewAI lets you build **multi-agent teams** with a high-level Python API. You define:
@@ -211,3 +285,48 @@ Memory lets agents reference prior tasks' outputs implicitly.
 - [ ] What does `memory=True` do?
 - [ ] How do you cap an agent's reasoning loops?
 - [ ] What's a realistic 4-5 agent crew for a content team?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| CrewAI | Role-based multi-agent framework with `Agent`, `Task`, `Crew` primitives. |
+| Agent | A single LLM persona with role, goal, backstory, and optional tools. |
+| Role | One-line job title that goes into the agent's system prompt. |
+| Goal | What the agent is trying to achieve, in 1–2 sentences. |
+| Backstory | Context paragraph that shapes the agent's voice and priorities. |
+| Task | A specific assignment with description, expected output, and an owning agent. |
+| `expected_output` | A description of what success looks like — guides the agent's stopping point. |
+| `context` | List of upstream tasks whose outputs are fed into this task. |
+| Crew | The container that owns agents and tasks and runs them. |
+| `kickoff` | The Crew method that starts execution; returns the final output. |
+| Process | Execution mode: `sequential` (run tasks in order) or `hierarchical` (manager routes). |
+| Manager agent | A hierarchical-mode coordinator that picks the next agent dynamically. |
+| `manager_llm` | The LLM that powers the manager in hierarchical mode. |
+| `allow_delegation` | Lets an agent ask peer agents for help mid-task. |
+| Tool | A callable the agent can invoke; CrewAI provides built-ins via `crewai-tools`. |
+| `BaseTool` | Class to subclass when writing a custom tool. |
+| `SerperDevTool` | Built-in web-search tool. |
+| `ScrapeWebsiteTool` | Built-in tool that fetches and extracts page content. |
+| Memory | Short-term store letting agents reference earlier tasks' outputs. |
+| Cache | Optional layer that reuses identical tool-call results. |
+| Embedder | The embedding model used for memory retrieval. |
+| `verbose` | When true, prints each agent's reasoning and tool calls. |
+| `max_iterations` | Upper bound on an agent's reasoning loops per task. |
+| ReAct | Reason + Act — the underlying loop CrewAI agents use. |
+| LangGraph | Lower-level state-machine alternative for non-role-based flows. |
+| MCP | Model Context Protocol — lets you expose tools that any agent (CrewAI included) can consume. |
+| Content factory | Common 4–6 agent crew pattern: researcher, outliner, writer, editor, SEO, publisher. |
+
+## Further reading
+- Previous: [02-langgraph.md](./02-langgraph.md) — graph-based alternative
+- Next: [04-mcp.md](./04-mcp.md) — standardize tools that crews consume
+- Sibling: [01-langchain.md](./01-langchain.md), [05-amazon-bedrock-agentcore.md](./05-amazon-bedrock-agentcore.md)
+- Foundation: [../04-agents-tool-use.md](../04-agents-tool-use.md) — multi-agent section
+- Companion: [../06-langchain-claude-api.md](../06-langchain-claude-api.md) — Claude SDK behind the scenes
+- Project: [../05-projects/03-agentic-onboarding-mcp.md](../05-projects/03-agentic-onboarding-mcp.md) — CrewAI + MCP for HR onboarding
+- CrewAI — [Documentation](https://docs.crewai.com/)
+- CrewAI — [Examples](https://github.com/crewAIInc/crewAI-examples)
+- CrewAI — [Tools](https://docs.crewai.com/tools/)

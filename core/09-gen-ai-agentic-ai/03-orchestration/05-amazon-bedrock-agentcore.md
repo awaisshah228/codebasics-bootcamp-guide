@@ -5,6 +5,78 @@
 
 ---
 
+## In one sentence
+Amazon Bedrock AgentCore is AWS's managed runtime for production agents — you bring an agent built in any framework (LangGraph, CrewAI, Strands, custom) and AgentCore handles secure execution, per-user identity, short- and long-term memory, sandboxed browser/code tools, MCP-compliant tool hosting, and full observability.
+
+## Real-world analogy
+AgentCore is **the airport for your agent**. LangGraph and CrewAI build the airplane; AgentCore is the runway, control tower, baggage handling, customs, and security checkpoints. You wouldn't fly a passenger jet out of your backyard — for production agents, AgentCore provides the regulated, audited infrastructure that auditors, ops teams, and end users need.
+
+## The intuition (plain English)
+- A working agent prototype is maybe 30% of a production system. The other 70% is auth, memory, scaling, audit logs, sandboxed tool execution — boring infra that takes weeks to get right.
+- AgentCore packages that 70% as managed AWS services: **Runtime** (serverless agent execution), **Memory** (short- and long-term, per-user), **Identity** (OAuth/Cognito-backed), **Browser** (sandboxed web automation), **Code Interpreter** (sandboxed Python), **Gateway** (MCP-compliant tool hosting), and **Observability** (CloudWatch / X-Ray traces).
+- It's **framework-agnostic** — you keep building with LangGraph ([02-langgraph.md](./02-langgraph.md)) or CrewAI ([03-crewai.md](./03-crewai.md)) or your own loop; AgentCore is the deployment target.
+- Models come from **Bedrock** — including `anthropic.claude-sonnet-4`, the same Claude family used everywhere else in the bootcamp ([../06-langchain-claude-api.md](../06-langchain-claude-api.md)).
+- This is the production target for the customer-care project ([../05-projects/04-customer-care-agentcore.md](../05-projects/04-customer-care-agentcore.md)).
+
+## Mini worked example — full Bedrock agent with memory and identity
+
+```python
+from bedrock_agentcore import AgentCoreApp, MemoryStrategy
+from langgraph.prebuilt import create_react_agent
+from langchain_aws import ChatBedrock
+from langchain_core.tools import tool
+
+@tool
+def customer_lookup(customer_id: str) -> dict:
+    """Fetch customer profile from CRM."""
+    return {"id": customer_id, "tier": "gold", "open_tickets": 1}
+
+@tool
+def refund_status(order_id: str) -> dict:
+    """Check refund status for an order."""
+    return {"order": order_id, "refund": "approved", "eta_days": 3}
+
+llm = ChatBedrock(model_id="anthropic.claude-sonnet-4")
+agent = create_react_agent(llm, tools=[customer_lookup, refund_status])
+
+app = AgentCoreApp(
+    name="customer-care-agent",
+    handler=agent,
+    memory=MemoryStrategy(short_term=True, long_term=["user_preferences"]),
+    identity={"oauth_provider": "cognito"},
+    observability=True,
+)
+
+# Local: app.run()
+# Deploy: $ agentcore deploy
+```
+
+A LangGraph ReAct agent + Claude on Bedrock + persistent per-user memory + Cognito auth + traces — wired up in one config object.
+
+## At-a-glance
+
+```mermaid
+flowchart TD
+    U[End user<br/>web / mobile] --> ID[AgentCore Identity<br/>Cognito / OAuth]
+    ID --> RT[AgentCore Runtime<br/>serverless container]
+    RT --> AG[Your agent<br/>LangGraph / CrewAI / custom]
+    AG --> CL[Claude on Bedrock<br/>anthropic.claude-sonnet-4]
+    AG --> MEM[AgentCore Memory<br/>short-term + long-term]
+    AG --> GW[AgentCore Gateway<br/>MCP-compliant tools]
+    AG --> BR[AgentCore Browser<br/>sandboxed web]
+    AG --> CI[AgentCore Code Interpreter<br/>sandboxed Python]
+    RT --> OBS[Observability<br/>CloudWatch / X-Ray]
+```
+
+## Why this matters
+- **Pick AgentCore when** your agent needs to run in production on AWS with real users, audit requirements, and per-user data isolation — and you don't want to build memory/identity/sandboxes yourself.
+- **Pick self-hosted (LangGraph + your infra)** when you need multi-cloud or want full control of the stack.
+- **Pick OpenAI Assistants API** when your org is OpenAI-centric and you don't need AWS-grade controls.
+- For the bootcamp's customer-care project ([../05-projects/04-customer-care-agentcore.md](../05-projects/04-customer-care-agentcore.md)), AgentCore turns a local LangGraph demo into a deployable, audited, multi-user system — the kind of artifact a recruiter at an enterprise can actually evaluate.
+- The Gateway service is also where MCP ([04-mcp.md](./04-mcp.md)) meets production: publish your APIs as MCP tools once, every internal agent inherits them.
+
+---
+
 ## 1. What AgentCore is
 
 **Amazon Bedrock AgentCore** is AWS's managed runtime for production AI agents. It's not a framework like LangGraph or CrewAI — it's the **infrastructure layer** beneath them.
@@ -233,3 +305,52 @@ You'll need an AWS account + Bedrock access (request via console). Free tier cov
 - [ ] What's the connection between AgentCore Gateway and MCP?
 - [ ] Walk through deploying a LangGraph agent to AgentCore.
 - [ ] Why does the bootcamp pick AgentCore for the Customer Care project?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| Amazon Bedrock | AWS's managed multi-model LLM service (hosts Claude, Llama, Titan, others). |
+| AgentCore | The agent-runtime layer on top of Bedrock; framework-agnostic. |
+| AgentCore Runtime | Serverless execution environment for your agent's code. |
+| Handler | The entry point function or compiled graph the runtime invokes per request. |
+| AgentCore Memory | Managed storage for short- and long-term agent memory. |
+| Short-term memory | Conversation turns and session-local state within one interaction. |
+| Long-term memory | Per-user facts and preferences that persist across sessions. |
+| MemoryStrategy | Config object selecting which memory features the agent uses. |
+| Summarization strategy | Condenses old turns to keep context within token limits. |
+| User preferences strategy | Extracts and stores stable user facts long-term. |
+| AgentCore Identity | Per-user auth layer (OAuth / Cognito) that passes user context to tools. |
+| Cognito | AWS's managed identity provider — common Identity backend. |
+| Token store | Encrypted store where Identity holds user OAuth tokens. |
+| AgentCore Browser | Sandboxed headless browser tool — safe web automation. |
+| AgentCore Code Interpreter | Sandboxed Python sandbox for the agent to run code. |
+| Sandbox | Isolated VM-level environment that contains untrusted execution. |
+| AgentCore Gateway | MCP-compliant host for exposing internal APIs as tools at scale. |
+| MCP | Model Context Protocol — the tool standard Gateway speaks ([04-mcp.md](./04-mcp.md)). |
+| Observability | Built-in traces, metrics, and audit logs for every agent invocation. |
+| CloudWatch | AWS monitoring/logging service Observability ships traces to. |
+| X-Ray | AWS distributed-tracing service for request-level spans. |
+| `ChatBedrock` | LangChain wrapper that calls Claude (and other models) via Bedrock. |
+| `anthropic.claude-sonnet-4` | The Bedrock model ID for Claude Sonnet 4 family. |
+| Strands SDK | An alternative framework AWS promotes for AgentCore agents. |
+| `AgentCoreApp` | The Python wrapper that turns your agent into a deployable AgentCore artifact. |
+| `agentcore deploy` | CLI command that ships the agent to AWS as an immutable artifact. |
+| Per-invocation pricing | You pay per LLM token + per minute of runtime + per memory unit stored. |
+| IAM role | AWS identity an agent runs as — replaces hardcoded credentials. |
+| Audit trail | Persistent record of who did what, when — required for regulated workloads. |
+| Customer Care project | Module 9 capstone that uses AgentCore for a deployable support agent. |
+
+## Further reading
+- Previous: [04-mcp.md](./04-mcp.md) — the protocol AgentCore Gateway speaks
+- Sibling: [01-langchain.md](./01-langchain.md), [02-langgraph.md](./02-langgraph.md), [03-crewai.md](./03-crewai.md)
+- Foundation: [../04-agents-tool-use.md](../04-agents-tool-use.md) — agent loop fundamentals
+- Companion: [../06-langchain-claude-api.md](../06-langchain-claude-api.md) — Claude SDK basics that Bedrock mirrors
+- Project: [../05-projects/04-customer-care-agentcore.md](../05-projects/04-customer-care-agentcore.md) — the AgentCore capstone
+- Related project: [../05-projects/03-agentic-onboarding-mcp.md](../05-projects/03-agentic-onboarding-mcp.md) — MCP-flavored onboarding (same shape as Gateway)
+- AWS — [Bedrock AgentCore overview](https://docs.aws.amazon.com/bedrock/latest/userguide/agents.html)
+- AWS — [Bedrock model catalog](https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html)
+- LangChain — [`langchain-aws` package](https://python.langchain.com/docs/integrations/platforms/aws/)
+- AWS — [Anthropic Claude on Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages.html)

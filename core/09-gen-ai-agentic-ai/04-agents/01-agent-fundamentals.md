@@ -5,6 +5,63 @@
 
 ---
 
+## In one sentence
+An agent is a Claude (or other LLM) call wrapped in a `while` loop that lets the model call your functions, see what they return, and decide the next move until it has a final answer.
+
+## Real-world analogy
+Think of a hotel concierge who doesn't actually drive the taxi or cook the food — but knows every phone number, picks up the right one, listens to the answer, and tells you what to do. The model is the concierge; tools are the phone numbers; the loop is the concierge re-deciding after every call.
+
+## The intuition (plain English)
+- A plain Claude API call gives you text. An agent gives you actions.
+- The trick is small: instead of just generating words, the model emits a JSON blob that says "please run `get_weather(city='Lahore')`". Your code runs the function, then hands the result back as another message.
+- The model now has new information and decides: call another tool? Or write the final answer for the user?
+- This loop — model thinks, model acts, your code observes, model thinks again — is called **ReAct**.
+- Without the loop, the model is a parrot. With it, the model is an assistant that can read databases, hit APIs, and finish multi-step jobs.
+
+## Mini worked example — one ReAct loop
+
+User asks: *"What's the weather in Lahore?"*
+
+```
+turn 1
+  user      : What's the weather in Lahore?
+  assistant : (tool_use block) get_weather(city="Lahore")
+              stop_reason = "tool_use"
+  your code : runs get_weather → {"temp_c": 22, "condition": "sunny"}
+  you append: tool_result back into messages
+
+turn 2
+  assistant : "It's sunny and 22°C in Lahore right now."
+              stop_reason = "end_turn"
+```
+
+Two Claude calls, one real function call, one finished answer. That's the entire pattern; everything else is decoration.
+
+## At-a-glance
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant L as Claude
+    participant R as Your runtime
+    participant T as Tool (function/API)
+
+    U->>L: "What's the weather in Lahore?"
+    L->>R: tool_use: get_weather(city="Lahore")
+    R->>T: call function
+    T-->>R: {"temp_c": 22, "condition": "sunny"}
+    R->>L: tool_result block
+    L-->>U: "Sunny and 22°C."
+```
+
+## Why this matters
+- Every "AI assistant that does things" — copilots, support bots, SQL bots — is this loop with a different toolset.
+- It is the bridge from *generating text* to *taking action*, the single mental model behind LangChain, LangGraph, CrewAI, AgentCore, and MCP.
+- Tool descriptions are the model's only manual; learning to write them well is the highest-leverage skill in agent building.
+- Once you grasp this loop, every framework on the market is just a different wrapper around it.
+
+---
+
 ## 1. What an agent is
 
 An **agent** is an LLM that takes actions in a loop:
@@ -256,3 +313,42 @@ Capture tool calls + LLM messages; replay for regression testing.
 - [ ] Two memory implementations for long-term context?
 - [ ] Three limits to set on every agent.
 - [ ] Build a 30-line ReAct agent with one custom tool.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| Agent | An LLM in a loop that can call tools and decide next steps. |
+| Tool | A function the agent can invoke (a Python function, an API call, a SQL query). |
+| Tool use | The model emitting a structured request to call a tool, instead of plain text. |
+| Function calling | Other vendors' name for tool use; the same idea. |
+| ReAct | "Reason + Act" — alternate thinking and tool calls until the answer is ready. |
+| Plan-and-Execute | Make a full plan first, then run each step; better for long, decomposable tasks. |
+| Reflection | Generate, critique your own draft, revise. Cheap quality boost on writing. |
+| Self-consistency | Run the same task N times and vote on the answer; reduces variance. |
+| Tool schema | JSON Schema that describes a tool's name, description, and arguments. |
+| Tool description | Plain-English text that tells the model when to use the tool. The single biggest reliability lever. |
+| Idempotent tool | A tool you can call twice with the same input safely (won't double-charge, double-email). |
+| `stop_reason` | The Claude API field telling you why the model stopped: `end_turn`, `tool_use`, `max_tokens`. |
+| `tool_use` block | The structured request the model emits asking your runtime to run a tool. |
+| `tool_result` block | The message you append back to the conversation containing the function's output. |
+| Max iterations | A hard cap on how many loop turns are allowed before you abort. |
+| Context window | The total token budget Claude has for the whole message history per call. |
+| Memory (short-term) | The current conversation buffer kept in `messages`. |
+| Memory (long-term) | State persisted across sessions (vector store, SQL, KV store). |
+| Sandbox | An isolated environment for running risky tool code (e.g. an LLM-generated script). |
+| Observability | Logging every tool call and LLM message so you can debug a misbehaving agent. |
+| Prompt injection | Hostile text inside a tool result that tries to hijack the agent's instructions. |
+
+## Further reading
+- Module overview: [../04-agents-tool-use.md](../04-agents-tool-use.md)
+- Next in folder: [02-multi-agent-systems.md](./02-multi-agent-systems.md)
+- Then: [03-agentic-evaluation.md](./03-agentic-evaluation.md)
+- Orchestration tools: [../03-orchestration/01-langchain.md](../03-orchestration/01-langchain.md), [../03-orchestration/02-langgraph.md](../03-orchestration/02-langgraph.md)
+- MCP standard for tools: [../03-orchestration/04-mcp.md](../03-orchestration/04-mcp.md)
+- Building with Claude SDK: [../06-langchain-claude-api.md](../06-langchain-claude-api.md)
+- Evaluating agents: [../07-evaluation-llm-apps.md](../07-evaluation-llm-apps.md)
+- Anthropic — [Tool use with Claude](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
+- Anthropic — [Building effective agents](https://www.anthropic.com/research/building-effective-agents)

@@ -5,6 +5,76 @@
 
 ---
 
+## In one sentence
+LangGraph is a state-machine framework: you define **nodes** (functions) and **edges** (transitions, possibly conditional) over a shared **state** dict, then compile it into a graph that loops, branches, pauses for humans, and persists itself across calls — everything plain LangChain chains can't do.
+
+## Real-world analogy
+LangGraph is **the flowchart on the back of a board game**. LangChain chains are a single straight track — you can't "go back 3 spaces" or "if you land here, draw a card." LangGraph is the full board: nodes are squares, edges are arrows, a conditional edge is a "fork in the road," and the state dict is the game piece carrying your score and inventory as you move.
+
+## The intuition (plain English)
+- Real agents need **loops** (call a tool, check the result, decide whether to call another) and **branches** (route by intent: support? sales? complaint?). LangChain's `|` pipe can't express either cleanly.
+- LangGraph models the whole flow as a graph. Each turn the runtime picks a node, runs it, merges the returned dict into state, then follows the outgoing edge.
+- **Conditional edges** read the state and pick a destination — that's how you implement "did the model emit a tool call? if yes, go to ToolNode; if no, end."
+- **Checkpointing** writes state to a store after every step, so a multi-day workflow can pause for human approval and resume right where it stopped.
+- It's the natural backbone for production agents — Anthropic's tool-use loop ([../04-agents-tool-use.md](../04-agents-tool-use.md)), pretty much expressed as a graph.
+
+## Mini worked example — a 3-node ReAct agent
+
+```python
+from typing import Annotated, TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode
+from langchain_anthropic import ChatAnthropic
+from langchain_core.tools import tool
+
+@tool
+def get_weather(city: str) -> str:
+    """Get current weather for a city."""
+    return f"54F, 78% rain in {city}"
+
+llm = ChatAnthropic(model="claude-sonnet-4-6").bind_tools([get_weather])
+
+class State(TypedDict):
+    messages: Annotated[list, add_messages]   # reducer = append, not overwrite
+
+def call_model(state): return {"messages": [llm.invoke(state["messages"])]}
+def route(state):      return "tools" if state["messages"][-1].tool_calls else END
+
+graph = StateGraph(State)
+graph.add_node("agent", call_model)
+graph.add_node("tools", ToolNode([get_weather]))
+graph.set_entry_point("agent")
+graph.add_conditional_edges("agent", route)
+graph.add_edge("tools", "agent")            # loop back
+
+app = graph.compile()
+out = app.invoke({"messages": [("user", "Umbrella in Seattle?")]})
+print(out["messages"][-1].content)
+```
+
+Three nodes, one conditional edge, one loop. That's a complete tool-using agent.
+
+## At-a-glance
+
+```mermaid
+flowchart TD
+    S[START] --> A[agent node<br/>calls Claude]
+    A --> D{tool_calls<br/>in last msg?}
+    D -- yes --> T[tools node<br/>runs the tool]
+    T --> A
+    D -- no --> E[END<br/>final answer]
+```
+
+## Why this matters
+- Once your app needs even one branch or one retry, LangGraph is the right home — bolting that onto LCEL gets ugly fast.
+- **Pick LangGraph when**: branching, loops, multi-agent supervisors, human-in-the-loop approval, or resumable long-running workflows.
+- **Pick LangChain ([01-langchain.md](./01-langchain.md))** for straight-line pipelines.
+- **Pick CrewAI ([03-crewai.md](./03-crewai.md))** when "team of role-played experts" maps better to your problem than "state machine."
+- This is the framework most teams move to **after** their LangChain prototype outgrows a single chain.
+
+---
+
 ## 1. Why LangGraph
 
 Plain LangChain chains are **straight-line**: input → step 1 → step 2 → output.
@@ -251,3 +321,50 @@ This is the **modern recommended** way to build complex agentic apps.
 - [ ] How does checkpointing work?
 - [ ] Build a 2-node graph: classify → answer.
 - [ ] Use `create_react_agent` to build a tool-using agent in 10 lines.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| LangGraph | LangChain's library for building LLM apps as state-machine graphs. |
+| State | A typed dict passed between nodes; every node reads and updates it. |
+| `TypedDict` | Python type that declares the keys and value types of a dict. |
+| Node | A function that takes state and returns a partial state dict. |
+| Edge | A transition from one node to another (unconditional). |
+| Conditional edge | An edge whose destination is chosen by a routing function over state. |
+| Reducer | A function that merges a node's return value into existing state (e.g., append vs overwrite). |
+| `add_messages` | Pre-built reducer that appends new messages to the conversation list. |
+| `Annotated[T, reducer]` | Python typing pattern that attaches a reducer to a state field. |
+| `StateGraph` | The graph builder class — you add nodes and edges, then compile. |
+| `START` / `END` | Special sentinel nodes for entry and exit points. |
+| `set_entry_point` | Shortcut that adds an edge from `START` to a named node. |
+| `compile()` | Turns the graph definition into an executable `Runnable`. |
+| `invoke` / `stream` / `astream` | Run the compiled graph synchronously / streaming / async-streaming. |
+| `stream_mode` | Selects what `stream` yields: `values`, `updates`, or `messages` (token-level). |
+| `ToolNode` | Pre-built node that executes any tool calls in the last message. |
+| `create_react_agent` | One-line helper that builds the standard ReAct loop graph. |
+| ReAct | Reason + Act — the alternating think-then-tool-call agent loop. |
+| Checkpointer | Object that saves state after each step, enabling resume and memory. |
+| `MemorySaver` | In-process checkpointer for development. |
+| `PostgresSaver` | Production checkpointer that persists to Postgres. |
+| `thread_id` | Identifier that ties a series of invocations to one persistent conversation. |
+| Human-in-the-loop | Pausing the graph and waiting for a person to approve before continuing. |
+| `interrupt_before` / `interrupt_after` | Compile flags that pause execution at named nodes. |
+| Subgraph | A compiled graph used as a node inside a bigger graph (multi-agent pattern). |
+| Supervisor | A coordinator agent that routes between specialist sub-agents. |
+| Tool calling | The mechanism by which Claude emits a structured request for a function. |
+| `bind_tools` | Attach a tool list to a model so it can emit `tool_calls`. |
+| Cycle | A path that returns to an earlier node — fine if there's a termination condition. |
+
+## Further reading
+- Previous: [01-langchain.md](./01-langchain.md) — chains and LCEL
+- Next: [03-crewai.md](./03-crewai.md) — role-based multi-agent alternative
+- Sibling: [04-mcp.md](./04-mcp.md), [05-amazon-bedrock-agentcore.md](./05-amazon-bedrock-agentcore.md)
+- Foundation: [../04-agents-tool-use.md](../04-agents-tool-use.md) — the agent loop in raw form
+- Companion: [../06-langchain-claude-api.md](../06-langchain-claude-api.md) — LangGraph + Claude SDK example
+- Project: [../05-projects/04-customer-care-agentcore.md](../05-projects/04-customer-care-agentcore.md) — LangGraph deployed via AgentCore
+- LangGraph — [Tutorials](https://langchain-ai.github.io/langgraph/)
+- LangGraph — [Concepts](https://langchain-ai.github.io/langgraph/concepts/)
+- LangGraph — [Persistence and checkpointing](https://langchain-ai.github.io/langgraph/concepts/persistence/)

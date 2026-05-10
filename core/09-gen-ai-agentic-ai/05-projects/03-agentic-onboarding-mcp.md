@@ -1,5 +1,86 @@
 # Project 3 — Agentic AI HR Onboarding (MCP)
 
+---
+
+## In one sentence
+Build a Claude agent that orchestrates a new-hire's full onboarding — email account, laptop, VPN, payroll, calendar, Slack — by calling tools exposed via the **Model Context Protocol (MCP)**, with human-in-the-loop checkpoints for sensitive actions.
+
+## Real-world analogy
+Think of a brand-new HR coordinator who has been handed a checklist, the master keychain to every internal system, and the rule "ask before you touch anything that costs money or grants admin access." They walk through the list, call each system in the right order, and report back when the new employee is fully set up. The agent is that coordinator; MCP is the master keychain.
+
+## The intuition (plain English)
+- Onboarding is 10+ steps across 6+ systems. Hard-coding the workflow is brittle; the wrong order breaks payroll.
+- An agent is better here because each new hire has slightly different needs (engineer vs exec vs intern) and the model can reason about which steps apply.
+- **MCP** is the open standard that lets you wrap each existing internal API — email, HR, equipment, calendar — as a uniform tool source. Same tool works across Claude, Claude Code, and any MCP-aware agent.
+- Sensitive actions (granting admin, sending offers) gate behind human approval; the agent calls the tool, the tool returns `pending_approval`, the agent moves on.
+- Always run in **dry-run mode** first: tools log what they *would* do without touching production. Flip the switch only after the eval suite passes.
+
+## Mini worked example — one ReAct loop trace
+
+User asks: *"Onboard the next pending engineer."*
+
+```
+turn 1  agent  : list_pending_onboardings()
+                → [{id: 42, name: "Awais", role: "engineer", start: "2026-05-13"}]
+
+turn 2  agent  : create_email_account(name="Awais", role="engineer")
+                → {email: "awais@co.com", temp_password: "..."}
+
+turn 3  agent  : request_laptop(employee_id=42, model="MacBook Pro")
+                → {ticket_id: "IT-9981"}
+
+turn 4  agent  : provision_vpn(employee_id=42)
+                → {status: "ok"}
+
+turn 5  agent  : invite_to_slack(email="awais@co.com",
+                                 channels=["#general", "#engineering"])
+                → {status: "ok"}
+
+turn 6  agent  : schedule_orientation(employee_id=42, start_date="2026-05-13")
+                → {calendar_event: "evt_551"}
+
+turn 7  agent  : "Awais (engineer) has been onboarded:
+                   email created, laptop ticket IT-9981 filed,
+                   VPN active, Slack invited, orientation booked
+                   for 2026-05-13. Manager approval still pending
+                   for admin access."   (end_turn)
+```
+
+Six tool calls (each one an MCP server response), one finished employee.
+
+## At-a-glance
+
+```mermaid
+sequenceDiagram
+    participant HR as HR user
+    participant A as Claude agent
+    participant M as MCP servers
+    participant H as Approval queue
+
+    HR->>A: "Onboard next pending"
+    A->>M: list_pending_onboardings()
+    M-->>A: [Awais, engineer]
+    A->>M: create_email_account(...)
+    M-->>A: email + temp_password
+    A->>M: request_laptop(...)
+    M-->>A: ticket_id
+    A->>M: provision_vpn(...)
+    M-->>A: ok
+    A->>H: grant_admin_access (sensitive)
+    H-->>A: pending_approval
+    A->>M: schedule_orientation(...)
+    M-->>A: event_id
+    A-->>HR: summary + pending items
+```
+
+## Why this matters
+- MCP is the most relevant 2025–2026 standard for AI tool integration. A working build proves you've moved past the "agent demo on toy tools" stage.
+- Wrapping real APIs as MCP servers is the exact skill enterprises pay for; every Fortune 500 has dozens of internal APIs that need this treatment.
+- The human-in-the-loop pattern is what makes agentic automation safe for HR, finance, and ops — domains with real legal exposure.
+- This is the project that signals to AI-engineering recruiters: "I can ship agents that do real work, not just summarise."
+
+---
+
 ## Domain
 Onboarding a new hire usually requires 10+ steps across systems:
 - Create email account
@@ -265,3 +346,46 @@ hr-onboarding-mcp/
 - [ ] README explains: what MCP is, why this design, how to extend?
 - [ ] Streamlit dashboard for observability?
 - [ ] LinkedIn post explaining MCP + showing the agent in action?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| Agent | An LLM in a loop that calls tools and decides next steps. |
+| MCP | Model Context Protocol — Anthropic's open standard for exposing tools and data to LLMs. |
+| MCP server | A process that publishes tools, resources, and prompts via MCP. |
+| MCP client | The LLM-facing side that connects to one or more MCP servers. |
+| FastMCP | The convenience Python framework for writing MCP servers (`@mcp.tool()` decorator). |
+| Tool | A function the agent can invoke (here: each onboarding action). |
+| Tool description | The plain-English text the model reads to decide when to call a tool. |
+| Tool result | The output of a tool, fed back to the model as a `tool_result` block. |
+| Stdio transport | One way an MCP client talks to a server — over standard input/output. |
+| `stdio_client` | The MCP client helper that spawns the server as a subprocess. |
+| Human-in-the-loop | Pausing the agent for a human approval before a sensitive action runs. |
+| Pending approval | A status returned by a tool meaning "I queued this; a human must sign off." |
+| Dry-run mode | Tools log what they would do without actually executing. |
+| Audit log | Persistent record of every tool call and result, for compliance. |
+| Rate limit | Max tool calls per session or hour. |
+| Cost cap | Hard ceiling on dollars spent per onboarding. |
+| Idempotency | Calling a tool twice with the same input is safe (no double-onboarding). |
+| LangGraph `interrupt_before` | A LangGraph primitive that pauses execution before a chosen node. |
+| Streamlit dashboard | A simple UI for HR to launch, watch, and approve onboardings. |
+| Trace | The full record of one agent run for debugging and compliance. |
+| `stop_reason` | Claude API field signalling end-of-turn or tool-use. |
+| Tool sequence eval | Asserting the agent called tools in a sensible order. |
+
+## Further reading
+- Module overview: [../README.md](../README.md)
+- Project 1 — RAG over listings: [01-real-estate-rag.md](./01-real-estate-rag.md)
+- Project 2 — chatbot with routing and SQL: [02-ecommerce-chatbot.md](./02-ecommerce-chatbot.md)
+- Project 4 — production agent on AgentCore: [04-customer-care-agentcore.md](./04-customer-care-agentcore.md)
+- MCP deep dive: [../03-orchestration/04-mcp.md](../03-orchestration/04-mcp.md)
+- Tool use foundations: [../04-agents-tool-use.md](../04-agents-tool-use.md)
+- LangGraph for agent flows: [../03-orchestration/02-langgraph.md](../03-orchestration/02-langgraph.md)
+- Building with Claude SDK: [../06-langchain-claude-api.md](../06-langchain-claude-api.md)
+- Trajectory and outcome eval: [../07-evaluation-llm-apps.md](../07-evaluation-llm-apps.md)
+- Anthropic — [Model Context Protocol](https://modelcontextprotocol.io/)
+- Anthropic — [Tool use with Claude](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
+- Anthropic — [Building effective agents](https://www.anthropic.com/research/building-effective-agents)
