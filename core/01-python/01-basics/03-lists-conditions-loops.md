@@ -5,6 +5,57 @@
 
 ---
 
+## In one sentence
+**Lists** hold an ordered collection of values, **if** picks one branch based on a condition, and **for** repeats a block of code once per item — together they unlock every algorithm you will write.
+
+## Real-world analogy
+A list is your shopping list — items in order, you can add, remove, or replace them. An `if` is a fork in the road: "if it is raining, take an umbrella, otherwise don't." A `for` loop is going down the shopping list one item at a time and ticking each off. With these three you can describe almost any everyday task.
+
+## The intuition (plain English)
+A list is created with square brackets `[1, 2, 3]` and is **mutable** — you can change it after creation. Use `if` / `elif` / `else` to make decisions. Use `for x in items:` to walk every item without managing an index. Python uses **truthiness** — empty things (`[]`, `""`, `0`, `None`) count as `False`, so `if my_list:` reads as "if the list has anything in it." `enumerate` gives you both index and item, `zip` walks two lists in parallel.
+
+## Mini worked example
+A grocery total calculator:
+
+```python
+items  = ["apple", "bread", "milk", "egg"]
+prices = [0.50,    2.00,    1.50,   0.20]
+
+total = 0
+for name, price in zip(items, prices):     # walk both lists in parallel
+    if price >= 1.00:
+        total += price                     # only count items >= $1
+        print(f"counted {name} (${price})")
+
+print(f"Total: ${total:.2f}")
+# counted bread ($2.0)
+# counted milk  ($1.5)
+# Total: $3.50
+```
+
+Three concepts (list, if, for) doing one realistic job in 6 lines.
+
+## At-a-glance
+
+```mermaid
+flowchart TB
+    Start[Start with a list] --> Loop{for item in list}
+    Loop --> Check{if condition?}
+    Check -- yes --> Do[do work<br/>e.g. accumulate, print]
+    Check -- no --> Skip[skip this item]
+    Do --> Next[next iteration]
+    Skip --> Next
+    Next --> Loop
+    Loop -- list exhausted --> Done[continue program]
+```
+
+## Why this matters
+- Almost every data task is "loop over rows, decide something, accumulate a result."
+- Truthiness and `is None` checks show up in every interview and every codebase.
+- Knowing `enumerate` and `zip` is the line between writing Python and writing Java-in-Python.
+
+---
+
 ## 1. Lists
 
 ### Creation & basic ops
@@ -243,3 +294,43 @@ avg = sum(above) / len(above) if above else 0
 - [ ] What's the difference between `nums.sort()` and `sorted(nums)`?
 - [ ] Write FizzBuzz from memory.
 - [ ] Why is `if my_list:` preferred over `if len(my_list) > 0:`?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **List** | An ordered, mutable sequence — `[1, 2, 3]` |
+| **Mutable** | Can be changed after creation |
+| **Index** | Position number, starting at 0 — `nums[0]` is the first item |
+| **Negative index** | Counts from the end — `nums[-1]` is the last |
+| **Slicing** | A range of a list — `nums[1:4]` takes positions 1, 2, 3 |
+| **Membership (`in`)** | Tests presence — `3 in nums` |
+| **In-place method** | Modifies the list and returns `None` — `nums.sort()` |
+| **Pure function** | Returns a new value without modifying input — `sorted(nums)` |
+| **`append`** | Add one item to the end |
+| **`extend`** | Add many items to the end |
+| **`pop`** | Remove and return an item |
+| **Mutable default argument** | The classic Python trap — `def f(x=[]):` shares one list across calls |
+| **`if` / `elif` / `else`** | Branching keywords |
+| **Truthiness** | Implicit conversion to bool: `0`, `""`, `[]`, `None` are falsy; everything else is truthy |
+| **Ternary expression** | One-line if: `"pass" if score >= 50 else "fail"` |
+| **`is None`** | The idiomatic way to test "this is None" — never use `== None` |
+| **Chained comparison** | `0 < x < 100` reads naturally and works as expected |
+| **`for` loop** | Walks every item in an iterable |
+| **`while` loop** | Repeats while a condition is true |
+| **`range(start, stop, step)`** | Generates numbers from `start` up to (not including) `stop` |
+| **`enumerate`** | Gives `(index, value)` pairs as you iterate |
+| **`zip`** | Pairs items from two or more iterables in lockstep |
+| **`break`** | Exit a loop early |
+| **`continue`** | Skip to the next iteration |
+| **`for ... else`** | The `else` runs only if the loop finished without `break` |
+| **Iterable** | Anything you can loop over with `for` |
+| **Off-by-one error** | Loop runs one too many or too few times — common with `range` |
+| **List comprehension** | A compact loop that builds a list — `[m for m in marks if m >= 50]` |
+
+## Further reading
+- Next: [04-functions-dict-tuples-files.md](04-functions-dict-tuples-files.md)
+- Comprehensions in depth: [../03-advanced/01-comprehensions-sets.md](../03-advanced/01-comprehensions-sets.md)
+- These structures power [06-numpy.md](06-numpy.md) and [07-eda-pandas-matplotlib-seaborn.md](07-eda-pandas-matplotlib-seaborn.md)

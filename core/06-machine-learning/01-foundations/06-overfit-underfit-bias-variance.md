@@ -6,6 +6,61 @@
 
 ---
 
+## In one sentence
+**Overfitting** is when your model memorizes the training data quirks, **underfitting** is when it's too dumb to learn the pattern, and the **bias-variance tradeoff** is the dial between them — the goal is the sweet spot in the middle.
+
+## Real-world analogy
+Two students prepare for an exam.
+- **Aman** memorizes the practice paper word-for-word. He scores 100% on it. On the real exam (different questions, same topic) he scores 40%. → **overfit.**
+- **Bina** glances at the practice paper for 5 minutes. She scores 30% on it and 32% on the real exam. → **underfit.**
+- **Chen** studies the *concepts* behind the practice paper. He scores 85% on practice and 82% on the real thing. → **sweet spot.**
+
+ML models do the same thing — and your job is to be Chen.
+
+## The intuition (plain English)
+- **Bias** = how badly the model gets things wrong on average (a too-simple model misses obvious patterns).
+- **Variance** = how much the model wobbles when retrained on a different sample of data (a too-flexible model swings wildly).
+- Total error = bias² + variance + irreducible noise. You can trade one for the other.
+- A simple model has high bias / low variance (Bina). A super-flexible model has low bias / high variance (Aman). Pick the dial position with smallest *total* error (Chen).
+
+## Mini worked example — fitting a curve to 7 points
+
+```
+true relationship:  y = 2x + noise
+data:  (1, 2.1), (2, 4.0), (3, 5.8), (4, 8.2), (5, 9.9), (6, 11.7), (7, 14.3)
+```
+
+Three models:
+
+| Model | Train MAE | Test MAE (new points) | Diagnosis |
+|-------|-----------|-----------------------|-----------|
+| `y = 5` (constant) | 4.5 | 5.0 | underfit — high bias |
+| `y = 2.0x + 0.1` (linear) | 0.2 | 0.3 | sweet spot |
+| `y = 0.001x⁹ − 0.05x⁸ + …` (degree-9 poly) | 0.001 | 14.7 | overfit — wiggles through every dot, generalizes terribly |
+
+The middle model has the lowest *test* error — that's the only number that matters.
+
+## At-a-glance — diagnosing the regime
+
+```mermaid
+flowchart TB
+    Q[Train and test scores] --> Q1{Train score?}
+    Q1 -- bad --> Q2{Test score?}
+    Q1 -- good --> Q3{Test score?}
+    Q2 -- "also bad" --> Under[UNDERFIT<br/>Higher capacity<br/>more features<br/>less regularization]
+    Q2 -- good --> Weird[Bug — investigate<br/>shuffling, leakage]
+    Q3 -- "much worse" --> Over[OVERFIT<br/>Regularize<br/>more data<br/>simpler model]
+    Q3 -- "close to train" --> Sweet[SWEET SPOT<br/>You're done — ship it]
+```
+
+## Why this matters
+- **Most ML failures are overfitting in disguise.** Your model crushes the training set, then disappoints in production.
+- **The gap between train and test scores is your single most important diagnostic.** Memorize: "small gap good, big gap bad."
+- **Different algorithms have different overfit knobs:** tree depth (RF), learning rate (XGB), dropout (NN), alpha (Ridge/Lasso). Knowing them is most of the practical job.
+- **More data doesn't fix bias.** A linear model on a curved problem stays bad regardless of dataset size.
+
+---
+
 ## 1. Underfitting — model too simple
 
 Symptoms:
@@ -199,3 +254,40 @@ Fixes:
 - [ ] Why doesn't more training data fix bias?
 - [ ] Why doesn't more regularization fix bias?
 - [ ] Walk through how you'd diagnose and fix an overfitting model on a credit-default problem.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Underfitting** | Model too simple — bad on train *and* test, similar scores |
+| **Overfitting** | Model memorizes train quirks — great on train, bad on test, big gap |
+| **Sweet spot** | Both scores good, small gap between them |
+| **Bias** | Systematic error: how far the average prediction is from truth |
+| **Variance** | How much the prediction changes when retrained on a different sample |
+| **Irreducible noise** | The randomness in data that no model can predict away (σ²) |
+| **Bias-variance tradeoff** | The fundamental tension: more flexible model lowers bias but raises variance |
+| **Bias-variance decomposition** | The math: `expected error = bias² + variance + noise²` |
+| **Model capacity / complexity** | How flexible the model is (degree, depth, # of parameters) |
+| **Generalization** | How well the model performs on unseen data |
+| **Generalization gap** | Difference between train and test scores |
+| **Train score** | Performance on the data you fit on — can lie if model overfits |
+| **Validation score** | Performance on data held out for tuning — your honest reality check |
+| **Test score** | Performance on never-touched data — final, honest report |
+| **Learning curve** | Plot of train and val score vs. amount of training data — diagnoses the regime |
+| **Regularization** | Adding a penalty for complexity to the loss — prevents overfitting (see next file) |
+| **L1 regularization (Lasso)** | Penalize sum of absolute weights — zeros out unimportant features |
+| **L2 regularization (Ridge)** | Penalize sum of squared weights — shrinks all weights toward zero |
+| **Dropout** | Neural-net trick: randomly disable neurons during training to prevent over-reliance |
+| **Early stopping** | Stop training when validation score stops improving — built-in overfit defense |
+| **`max_depth`** | Tree-model knob: deeper = more flexible = more overfit-prone |
+| **`min_samples_leaf`** | Tree-model knob: bigger = more conservative splits = less overfitting |
+| **Cross-validation (CV)** | Average performance across multiple train/val splits — more stable than one split |
+| **Capacity** | Same as model complexity — vague umbrella term for "flexibility" |
+| **Public/private leaderboard** | In Kaggle: hidden test set ("private") punishes models that overfit the public one |
+
+## Further reading
+- Previous: [05-preprocessing-encoding.md](05-preprocessing-encoding.md)
+- Next: [07-regularization.md](07-regularization.md) — the standard lever for fighting overfitting
+- CV deep-dive: [../03-ensemble/03-cross-validation-tuning.md](../03-ensemble/03-cross-validation-tuning.md)

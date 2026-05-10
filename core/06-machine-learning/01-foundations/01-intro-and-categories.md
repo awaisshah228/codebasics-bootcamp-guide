@@ -7,6 +7,50 @@
 
 ---
 
+## In one sentence
+**Machine learning** is teaching a computer to find patterns in examples — instead of you writing the rules, the data writes them for the computer.
+
+## Real-world analogy
+Think of how a child learns to spot a dog. You don't hand them a 200-page rulebook ("ears must be triangular, fur length 2–8cm…"). You point at dozens of dogs and say "dog." After enough examples, they generalize to a new dog they've never seen. ML works the same way — show it 10,000 emails labeled spam/not-spam and it learns its own rule.
+
+## The intuition (plain English)
+- A model is a **function** `f(x) → y` that maps inputs (features) to outputs (predictions).
+- Instead of you coding `if income > 50k and age < 30 then risky`, the model **learns the coefficients** from labeled examples.
+- **Supervised learning** has answer keys (labels). **Unsupervised** has only the inputs and asks "what groups exist here?".
+- Your job is to (1) frame the right problem, (2) feed clean data, (3) pick a sensible algorithm, (4) honestly evaluate.
+
+## Mini worked example — house price vs spam email
+You're a realtor. You have 1,000 past sales with `(sqft, bedrooms, age) → sale_price`. You want to predict the price of a new listing.
+- Inputs `x` = (1500 sqft, 3 bedrooms, 12 years old)
+- Output `y` = $345,000 (a continuous number → **regression**)
+
+Now you're an email provider. You have 50,000 emails with `(words, sender) → spam? (yes/no)`.
+- Inputs `x` = ("free money urgent", unknown_sender)
+- Output `y` = "spam" (a category → **classification**)
+
+Same recipe — different label type changes the algorithm and metric.
+
+## At-a-glance — the ML problem family tree
+
+```mermaid
+flowchart TB
+    Start[I have data and a question] --> Q1{Do I have labeled<br/>example answers?}
+    Q1 -- yes --> Sup[Supervised]
+    Q1 -- no --> Unsup[Unsupervised<br/>e.g. customer segmentation]
+    Q1 -- "reward signal only" --> RL[Reinforcement<br/>e.g. game-playing bot]
+    Sup --> Q2{Is the answer a<br/>number or a category?}
+    Q2 -- number --> Reg[Regression<br/>house price, premium, demand]
+    Q2 -- category --> Cls[Classification<br/>spam, fraud, churn, default]
+```
+
+## Why this matters
+- **Frames every ML decision** — picking the wrong category (regression vs classification) means the wrong loss, wrong metric, wrong model.
+- **Sets honest expectations** — ML works when patterns exist in the data; it can't conjure signal from noise.
+- **Decides what data you collect** — supervised needs labels (often expensive); unsupervised doesn't.
+- **Drives later module choice** — every later file (linear regression, logistic regression, k-means) is one *type* of model on this tree.
+
+---
+
 ## 1. What is Machine Learning, in one paragraph
 
 A **machine learning model** is a function `f(x) → y` whose parameters are learned from examples instead of being hand-coded. You give it inputs (features) and (for supervised learning) target outputs, and it tunes its parameters to minimize a loss between its predictions and the true outputs.
@@ -192,3 +236,43 @@ Skip these and you'll end up training a beautiful model on the wrong problem.
 - [ ] What's a baseline model and why train one?
 - [ ] State 3 questions to ask before framing a problem as ML.
 - [ ] What does sklearn's `.fit / .predict / .score` interface look like?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Machine learning (ML)** | Computer programs that learn rules from examples instead of being explicitly coded |
+| **Model** | The learned function `f(x) → y`, captured in numbers (parameters/weights) |
+| **Features (X)** | The inputs you feed the model — columns like age, income, sqft |
+| **Target / label (y)** | The answer you want the model to predict (price, spam yes/no) |
+| **Sample / row** | One example — one customer, one email, one transaction |
+| **Supervised learning** | You have labeled examples; model learns to map x → y |
+| **Unsupervised learning** | No labels; model finds structure (groups, anomalies) |
+| **Semi-supervised** | Few labeled examples + many unlabeled ones |
+| **Self-supervised** | The model invents its own labels from raw data (how LLMs are pre-trained) |
+| **Reinforcement learning** | Model learns by trial-and-error from a reward signal (game-playing) |
+| **Classification** | Predict a category (spam/not, default/not) |
+| **Regression** | Predict a number (price, premium, demand) |
+| **Multi-label classification** | One input gets multiple labels (a photo is both "dog" and "outdoor") |
+| **Ordinal classification** | Categories that have a natural order (low/medium/high, 1–5 stars) |
+| **Loss / cost function** | A number that says "how wrong are you?" — the model tries to make it small |
+| **MSE (Mean Squared Error)** | Average of squared (predicted − actual). Standard regression loss. |
+| **Cross-entropy / log loss** | Standard classification loss; punishes confident wrong predictions hard |
+| **Train set** | Data the model fits on |
+| **Validation set** | Data used to compare hyperparameter choices |
+| **Test set** | Final, never-touched data used once to estimate real-world performance |
+| **Train/test split** | Splitting your data so test stays untouched until the very end |
+| **Baseline model** | The dumbest sensible model (predict the mean, predict majority class) — a sanity check before fancy models |
+| **Data leakage** | Using info at training time that wouldn't be available at prediction time — fake high scores |
+| **Feature engineering** | Hand-crafting new input columns (BMI, day-of-week, log of income) to help the model |
+| **sklearn** | scikit-learn — the standard Python ML library; every estimator has `.fit()`, `.predict()`, `.score()` |
+| **`.fit(X, y)`** | "Learn parameters from this data" |
+| **`.predict(X)`** | "Make predictions for these inputs" |
+| **Hyperparameter** | A knob you set before training (max tree depth, learning rate); not learned from data |
+
+## Further reading
+- Next: [02-linear-regression.md](02-linear-regression.md) — the simplest supervised model
+- Then: [../02-classification/01-logistic-regression.md](../02-classification/01-logistic-regression.md) — the simplest classifier
+- Style guide: [../../../BEGINNER-STYLE-GUIDE.md](../../../BEGINNER-STYLE-GUIDE.md)

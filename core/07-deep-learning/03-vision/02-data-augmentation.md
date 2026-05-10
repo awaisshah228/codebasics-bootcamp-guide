@@ -5,6 +5,65 @@
 
 ---
 
+## In one sentence
+**Data augmentation** is randomly transforming each training image (flip, crop, jitter the colors) every time the model sees it, so a small dataset feels like a much bigger one and the model learns to ignore irrelevant variations.
+
+## Real-world analogy
+You're training a guard dog to recognize you. If you always show up wearing the same jacket in the same lighting, the dog learns "jacket + lamp = owner." Show up sometimes in a hat, sometimes mirrored, sometimes in shadow — now it learns *you*. Augmentation is identical: jitter the conditions so the network learns the actual content, not the lighting accident.
+
+## The intuition (plain English)
+- A small training set is the #1 cause of overfitting in vision; augmentation is the cheapest fix.
+- **Geometric** augmentations (flip, crop, rotate) teach the network that the *content* matters, not the position.
+- **Color** augmentations (brightness, contrast) make it robust to lighting differences.
+- Augmentation is applied **only at training time**; validation must use a deterministic transform so your metric is reliable.
+- Always **visualize** a batch of augmented images — over-strong augmentation can destroy the label.
+
+## Mini worked example — what one image looks like across 4 epochs
+
+A single CIFAR-10 cat image with `RandomCrop(32, padding=4) + RandomHorizontalFlip + ColorJitter`:
+
+```
+Epoch 1:  cat shifted 2px left, slight extra brightness
+Epoch 2:  cat mirrored horizontally, normal lighting
+Epoch 3:  cat shifted 3px down, +20% contrast
+Epoch 4:  cat shifted up-right, slightly reddish
+
+The model never sees the same image twice → it can't memorize pixel patterns.
+The label "cat" stays the same in every version.
+```
+
+Result: a 5,000-image dataset behaves like ~50,000 effective images.
+
+## At-a-glance — what to apply where
+
+```mermaid
+flowchart TB
+    D{Image domain?} --> N[Natural photos]
+    D --> M[Medical X-ray / scan]
+    D --> S[Satellite / aerial]
+    D --> F[Face recognition]
+    D --> O[Text / OCR]
+
+    N --> N1[RandomResizedCrop<br/>HFlip + ColorJitter<br/>+ optional Mixup]
+    M --> M1[Mild rotation/zoom only<br/>NO flip if anatomy is asymmetric]
+    S --> S1[H-flip + V-flip + 90 rotations]
+    F --> F1[H-flip if symmetric features<br/>NO flip if scars/IDs matter]
+    O --> O1[NO flip ever<br/>mirrored text is not text]
+```
+
+```
+   train_tfm: random ─► augmented batches ─► model.train()
+   val_tfm:   deterministic ─► same image every run ─► model.eval()
+                                   (no augmentation, just resize + normalize)
+```
+
+## Why this matters
+- A simple `RandomCrop + HFlip` adds ~3pp accuracy on CIFAR-10 — it's one of the highest ROI tricks in DL.
+- Modern augmentations (**Mixup**, **CutMix**, **RandAugment**) push accuracy another 1–3pp on top of that.
+- Wrong augmentation (vertical-flipping faces, mirroring text) creates a silent label bug that tanks production accuracy.
+
+---
+
 ## 1. Why augment
 
 You have 5,000 cat/dog images. The model sees the same images 50 times across 50 epochs → memorizes them. Augmentation creates *artificial diversity* by transforming each image differently each time it's seen.
@@ -202,3 +261,40 @@ Good for competitions and final predictions; not worth it for real-time inferenc
 - [ ] Why use albumentations over torchvision.transforms?
 - [ ] What's TTA and when is it worth using?
 - [ ] Walk through deciding the augmentation set for a medical X-ray classifier.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Data augmentation** | Random image transformations applied during training to create variety |
+| **Train transform** | A pipeline that includes random augmentations |
+| **Val / test transform** | A deterministic pipeline (no randomness) for fair evaluation |
+| **`transforms.Compose`** | Chains transformations together |
+| **`Resize` / `CenterCrop`** | Deterministic size adjustments |
+| **`RandomCrop`** | Crop a random patch (used after a small padding) |
+| **`RandomResizedCrop`** | Random crop + random aspect ratio + resize — strong augmentation |
+| **`RandomHorizontalFlip`** | 50% chance to mirror the image left/right |
+| **`RandomVerticalFlip`** | 50% chance to mirror up/down — only when the domain allows |
+| **`RandomRotation`** | Rotate by a random angle within ±degrees |
+| **`RandomAffine`** | Combined translate + rotate + shear + scale |
+| **`ColorJitter`** | Random brightness/contrast/saturation/hue shifts |
+| **`RandomErasing` / Cutout** | Replace a random rectangle with noise or a fixed color |
+| **Mixup** | Blend two images linearly and blend their labels by the same weight |
+| **CutMix** | Paste a patch of one image onto another; mix labels by area |
+| **AugMix** | Compose multiple augmentation chains and average them |
+| **AutoAugment / RandAugment** | Learned or parameterized augmentation policies |
+| **TTA (Test-Time Augmentation)** | Apply augmentations at inference and average predictions |
+| **`Normalize(mean, std)`** | Subtract mean, divide by std per channel |
+| **ImageNet stats** | The standard mean/std (`[0.485, 0.456, 0.406]` / `[0.229, 0.224, 0.225]`) used by pre-trained models |
+| **albumentations** | Faster augmentation library; handles bounding boxes and masks alongside images |
+| **Bounding box / mask** | Extra label types for detection / segmentation that must be transformed with the image |
+| **Determinism** | Same input → same output every time; required for validation transforms |
+| **Label-preserving** | Augmentation that doesn't change the correct answer |
+| **Effective dataset size** | How many "different-looking" samples your training pipeline yields |
+
+## Further reading
+- Pairs with: [01-cnn.md](01-cnn.md) — augmentation is essential to make CNNs generalize
+- Used in: [03-transfer-learning-pretrained.md](03-transfer-learning-pretrained.md) — fine-tuning recipes always include augmentation
+- albumentations docs: https://albumentations.ai

@@ -7,6 +7,64 @@
 
 ---
 
+## In one sentence
+**Regularization** is the umbrella term for any technique that stops a deep network from *memorizing* the training data so it can actually generalize to new data.
+
+## Real-world analogy
+Imagine a study group preparing for an exam. If everyone always studies together with the same friends, they collectively memorize the practice questions. **Dropout** is like randomly muting 30% of the group on every Zoom call — each person now has to learn the material themselves. The team becomes more resilient. **BatchNorm** is the meeting facilitator who, before each topic, normalizes everyone's volume so no one dominates and the discussion stays balanced.
+
+## The intuition (plain English)
+- A neural net usually has more weights than training samples → it can memorize the data unless you push back.
+- **Weight decay** adds a small penalty for big weights, gently keeping them small.
+- **Dropout** randomly turns off neurons during training so no single neuron becomes a single point of failure.
+- **BatchNorm / LayerNorm** rescales the inside of the network so each layer sees a stable distribution — speeds training and gently regularizes too.
+
+## Mini worked example — what dropout actually does to one layer
+
+A hidden layer outputs activations `a = [0.8, 0.5, 1.2, 0.3, 0.9]` for one sample. Apply dropout with `p = 0.4` (40% chance of zeroing each one):
+
+```
+random mask drawn:        [1, 0, 1, 1, 0]      (entries kept with prob 1-p = 0.6)
+
+raw masked:               [0.8, 0.0, 1.2, 0.3, 0.0]
+
+PyTorch's "inverted dropout" rescales by 1/(1-p) = 1/0.6 ≈ 1.667:
+
+dropout output (train):   [1.33, 0.0, 2.00, 0.50, 0.0]
+
+at inference (model.eval): no zeroing, no rescaling — uses [0.8, 0.5, 1.2, 0.3, 0.9]
+```
+
+The next layer sees a different "subset" each batch, can't lock onto one teammate, and learns redundant pathways.
+
+## At-a-glance — when to reach for which
+
+```mermaid
+flowchart TB
+    P[Symptom?] --> S{What's happening?}
+    S -- Train loss low, val loss high --> R1[Add Dropout 0.2-0.3<br/>OR raise weight_decay]
+    S -- Training is unstable / slow --> R2[Add BatchNorm after every Conv/Linear]
+    S -- Tiny batch size or batch=1 --> R3[Use LayerNorm or GroupNorm]
+    S -- Sequence model Transformer/RNN --> R4[Always LayerNorm]
+    S -- Already doing all the above --> R5[Get more data — best regularizer]
+```
+
+```
+   Modern CNN block recipe:
+
+   x ─► Conv ─► BatchNorm ─► ReLU ─► Conv ─► BatchNorm ─► ReLU ─► Dropout2d ─► out
+        │           │                    │           │                  │
+   learnable    stable inputs       learnable    stable inputs    random zeroing
+                to next layer                    to next layer    forces redundancy
+```
+
+## Why this matters
+- A model that hits 99% on train and 80% on test is **broken** — regularization is how you fix it.
+- BatchNorm is what made it possible to train networks 100+ layers deep without exploding.
+- Picking the wrong normalization (BatchNorm in a Transformer, batch=1) is a classic silent-failure bug.
+
+---
+
 ## 1. Why regularize neural networks
 
 Neural nets are massively over-parameterized — millions of weights vs thousands of training samples. Without regularization they memorize training data and fail on test data.
@@ -190,3 +248,41 @@ Combined: weight decay (in optimizer) + BN + dropout + early stopping = robust t
 - [ ] What's the recommended dropout p range?
 - [ ] Where in a `Linear → ReLU` block does BN go?
 - [ ] If you're at batch size 1, which normalization do you use?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Regularization** | Any technique that reduces overfitting (dropout, weight decay, etc.) |
+| **Overfitting** | Model memorizes training data; performs poorly on new data |
+| **Generalization** | How well the model performs on unseen data |
+| **Weight decay** | Penalty added to the loss for large weights — keeps them small |
+| **L2 regularization** | Same idea: sum of squared weights as a penalty |
+| **L1 regularization** | Sum of absolute weights — encourages sparsity (zeros) |
+| **AdamW** | Adam variant that applies weight decay correctly |
+| **Dropout** | Randomly zero out a fraction `p` of neurons each training step |
+| **`Dropout2d`** | Dropout that zeroes whole feature maps in a CNN |
+| **Inverted dropout** | Standard implementation: scale up surviving activations by 1/(1-p) at train time so inference needs no change |
+| **Probability `p`** | Chance any given neuron is dropped (typical 0.1–0.5) |
+| **`model.train()`** | Activates dropout and uses batch stats in BatchNorm |
+| **`model.eval()`** | Disables dropout and uses running stats in BatchNorm |
+| **Batch Normalization (BN)** | Normalizes each feature across the batch to mean 0, std 1, then learns scale/shift |
+| **`BatchNorm1d` / `BatchNorm2d`** | BN for fully-connected / 2D conv outputs |
+| **Running mean / running var** | BatchNorm's stored stats used at inference time |
+| **γ (gamma) and β (beta)** | BN's learnable scale and shift parameters |
+| **Layer Normalization (LN)** | Normalize across features within each sample — used in Transformers |
+| **`LayerNorm`** | PyTorch's LN module |
+| **GroupNorm / InstanceNorm** | Variants for tiny batches or style transfer |
+| **Internal covariate shift** | The historical "explanation" for why BN helps; now debated, but BN works regardless |
+| **Skip / residual connection** | Shortcut path (used in ResNet) that helps gradients flow through deep nets |
+| **Label smoothing** | Replacing one-hot labels with soft targets (e.g., 0.9 / 0.1) to prevent over-confidence |
+| **Data augmentation** | Synthetically expanding the training set (rotations, crops) — covered in vision module |
+| **Early stopping** | Halt training when validation loss stops improving |
+| **Patience** | How many bad epochs early-stopping tolerates |
+
+## Further reading
+- Next: [05-hyperparameter-optuna.md](05-hyperparameter-optuna.md) — search for the right dropout/weight_decay automatically
+- Image-specific augmentation: [../03-vision/02-data-augmentation.md](../03-vision/02-data-augmentation.md)
+- LayerNorm in context: [../04-sequence/03-transformer-architecture.md](../04-sequence/03-transformer-architecture.md)

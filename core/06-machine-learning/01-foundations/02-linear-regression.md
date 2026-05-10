@@ -6,6 +6,65 @@
 
 ---
 
+## In one sentence
+**Linear regression** draws the straight line (or flat plane, in higher dimensions) that comes closest to your data points, then uses that line to predict a number for new inputs.
+
+## Real-world analogy
+Imagine you're plotting houses on graph paper: x-axis is square footage, y-axis is sale price. The dots roughly form a rising trend — bigger houses cost more. Linear regression places a ruler through those dots so the total gap between the line and each dot is as small as possible. To predict a new house's price, you look up its sqft on the line.
+
+## The intuition (plain English)
+1. The model is a **straight line**: `price = intercept + slope × sqft`.
+2. We pick the line that minimizes total **squared gap** between predicted and actual prices (squared so over- and under-predictions both count, and big misses are punished more).
+3. With multiple inputs (sqft, bedrooms, age), the line becomes a **flat surface** through higher-dimensional space — but the math is the same.
+4. The slopes (coefficients) tell you how much price changes per unit of each input — extremely useful for explanation.
+
+## Mini worked example — fitting a line to 4 houses
+
+```
+sqft (x):    1000   1500   2000   2500
+price (y):   200k   260k   330k   410k
+```
+
+Find the line `price = β₀ + β₁ · sqft`:
+
+```
+mean_x = (1000+1500+2000+2500)/4 = 1750
+mean_y = (200+260+330+410)/4    = 300
+
+β₁ = Σ(xᵢ−mean_x)(yᵢ−mean_y) / Σ(xᵢ−mean_x)²
+   = [(-750)(-100) + (-250)(-40) + (250)(30) + (750)(110)] / [750² + 250² + 250² + 750²]
+   = [75000 + 10000 + 7500 + 82500] / [562500 + 62500 + 62500 + 562500]
+   = 175000 / 1250000
+   = 0.14   (i.e. $140 per sqft)
+
+β₀ = mean_y − β₁ · mean_x = 300 − 0.14 · 1750 = 55  (i.e. $55,000)
+```
+
+So `price ≈ 55,000 + 140 × sqft`. A new 1,800-sqft house: predicted price = $55,000 + $140 × 1,800 = **$307,000**.
+
+## At-a-glance — the geometry
+
+```
+price │              ●     <- gap (residual) between dot and line
+      │         ●  /
+      │      ─/●─/         <- best-fit line
+      │    /● 
+      │   /  ●
+      │  /●
+      │ /
+      └────────────► sqft
+
+The line minimizes Σ(gap)²   ←  "ordinary least squares"
+```
+
+## Why this matters
+- **The base model in every regression problem** — start here, then upgrade only if it underperforms.
+- **Interpretable coefficients**: "+$140 per sqft, +$5k per bedroom" — directly explainable to stakeholders.
+- **Foundation for Ridge, Lasso, logistic regression, and even neural networks** — they all share the same `wᵀx + b` skeleton.
+- **Healthcare premium project** uses linear regression as the first baseline before XGBoost.
+
+---
+
 ## 1. Simple Linear Regression — predicting y from a single x
 
 The model:
@@ -217,3 +276,42 @@ This template is reusable for *any* tabular regression problem.
 - [ ] Why do we use `drop_first=True` in one-hot encoding?
 - [ ] List 5 assumptions of linear regression.
 - [ ] Compute the formula for $\beta_1$ in simple linear regression by hand on a 4-point toy example.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Linear regression** | Fitting a straight line (or flat plane) that minimizes total squared gap to the data |
+| **Intercept (β₀)** | The model's prediction when all features are zero — where the line crosses the y-axis |
+| **Slope / coefficient (β_j)** | How much y changes for a 1-unit increase in feature x_j, with other features held constant |
+| **Residual** | One row's gap: `actual − predicted` — what the line missed by |
+| **OLS (Ordinary Least Squares)** | The math trick of choosing β to minimize the sum of squared residuals — gives a closed-form solution |
+| **Closed-form solution** | An exact formula (no iteration needed) — for OLS it's `β = (XᵀX)⁻¹Xᵀy` |
+| **MSE (Mean Squared Error)** | Average of residuals squared — the standard regression loss |
+| **R² (R-squared)** | "Fraction of y's variance the model explains" — 1 = perfect, 0 = no better than guessing the mean |
+| **Multiple regression** | Linear regression with more than one input feature |
+| **Polynomial regression** | Linear regression on `x, x², x³, …` — fits curves while still using linear math |
+| **One-hot encoding** | Turning a string column ("red"/"blue") into 0/1 columns, one per category |
+| **Dummy variable trap** | Keeping all one-hot columns creates a perfect linear relation — breaks regression. Drop one. |
+| **Multicollinearity** | Two or more features carry the same info — coefficients become unstable |
+| **VIF (Variance Inflation Factor)** | Number that flags multicollinearity for each feature; >5 is concerning |
+| **Standardization** | Subtract mean, divide by std dev — puts every feature on the same scale |
+| **Homoscedasticity** | Residual spread is constant across the predicted range (the "good" pattern) |
+| **Heteroscedasticity** | Residual spread changes with the prediction — funnel shape on residual plot |
+| **Residual plot** | Scatter of (predicted, residual) — should look like a random horizontal cloud |
+| **Linearity assumption** | y is roughly a linear function of the features (one of OLS's main assumptions) |
+| **Normality of residuals** | Residuals are approximately bell-shaped — needed for confidence intervals on coefficients |
+| **Independence** | One row's outcome doesn't depend on another's |
+| **Feature scaling** | Bringing features to similar magnitudes so coefficients are comparable |
+| **`coef_` / `intercept_`** | sklearn attributes that hold the learned β₁..β_p and β₀ |
+| **`reshape(-1, 1)`** | NumPy idiom to convert a 1D array of shape (n,) into a 2D column (n, 1) for sklearn |
+| **Standardized coefficient** | The β computed after scaling features — comparable across features regardless of original units |
+
+## Further reading
+- Previous: [01-intro-and-categories.md](01-intro-and-categories.md)
+- Next: [03-gradient-descent-cost.md](03-gradient-descent-cost.md) — *how* the line is actually found numerically
+- Then: [04-model-evaluation-regression.md](04-model-evaluation-regression.md) — judging how good the line is
+- Multicollinearity deep-dive: [../04-unsupervised/02-vif.md](../04-unsupervised/02-vif.md)
+- Math foundation: [../../05-math-statistics/01-foundations/02-central-tendency-dispersion.md](../../05-math-statistics/01-foundations/02-central-tendency-dispersion.md) — mean, variance, correlation underlie regression

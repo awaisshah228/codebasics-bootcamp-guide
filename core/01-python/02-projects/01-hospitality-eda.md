@@ -11,6 +11,66 @@
 
 ---
 
+## In one sentence
+You play data analyst for a hotel chain — load five CSVs, clean and join them, answer five business questions with charts, and write a five-bullet insight summary that a non-technical General Manager can act on.
+
+## Real-world analogy
+Imagine you are the new analyst on a hotel chain's revenue team. The CFO drops a folder of spreadsheets on your desk and says, "Mumbai feels off, weekends feel underpriced, MakeYourTrip cancellations seem high — figure it out and tell me what to do." Your job is not to write fancy code; it is to turn raw rows into one page of decisions the CFO can sign off on Monday.
+
+## The intuition (plain English)
+You are given a small **star schema**: fact tables (bookings, daily aggregates) plus dimension tables (hotels, rooms, dates). Load each CSV with pandas, clean obvious bad rows (negative revenue, impossible guest counts), join the facts to the dimensions, then run `groupby` over the questions you care about. The output is **not** a notebook — the output is a markdown summary like *"Mumbai Luxury drives 41% of revenue from 28% of bookings — protect this segment."* That sentence is the deliverable.
+
+## Mini worked example
+A typical question, end to end:
+
+```python
+import pandas as pd
+
+bookings = pd.read_csv("fact_bookings.csv")
+hotels   = pd.read_csv("dim_hotels.csv")
+
+# 1. clean
+bookings = bookings[bookings["revenue_realized"] >= 0]
+
+# 2. join fact + dim
+df = bookings.merge(hotels, on="property_id", how="left")
+
+# 3. answer the GM's question
+revenue_by_city = (
+    df.groupby("city")["revenue_realized"]
+      .sum()
+      .sort_values(ascending=False)
+)
+print(revenue_by_city.head())
+
+# 4. translate to insight
+# "Mumbai contributes 41% of total revenue.
+#  Recommend protecting that segment in any pricing test."
+```
+
+The numbers come from `groupby`. The **sentence** is what gets shipped.
+
+## At-a-glance — the analyst's loop
+
+```mermaid
+flowchart TB
+    Load[Load 5 CSVs] --> Inspect[head + info + describe]
+    Inspect --> Clean[drop bad rows<br/>parse dates<br/>handle NA]
+    Clean --> Join[merge facts and dims]
+    Join --> Derive[compute occupancy %,<br/>RevPAR, weekday/weekend split]
+    Derive --> Q[Answer GM questions<br/>via groupby + filter]
+    Q --> Plot[Visualize each]
+    Plot --> Summary[Write 5 insight bullets]
+    Summary --> Repo[Commit clean GitHub repo<br/>with README + screenshots]
+```
+
+## Why this matters
+- This project is the resume piece — recruiters open the repo and read the README first.
+- It teaches the **fact + dim** mental model used in every BI / analytics role.
+- The skill being graded is "translate numbers into a stakeholder-ready sentence" — the rare skill that gets you hired.
+
+---
+
 ## 1. The business problem
 
 A hotel chain with multiple properties across cities wants answers to:
@@ -208,3 +268,42 @@ This is the version recruiters see. Polish it.
 - [ ] Did I produce ≥5 written insights backed by charts?
 - [ ] Is my GitHub repo's README clean enough to defend in an interview?
 - [ ] Have I posted at least 1 LinkedIn post about this project?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Hospitality domain** | The hotel industry — properties, rooms, bookings, guests, ratings |
+| **Property** | One hotel location |
+| **Booking** | One reservation transaction |
+| **Occupancy rate** | Rooms booked / rooms available, expressed as a percentage |
+| **Revenue realized** | Actual revenue from a booking (after cancellations / discounts) |
+| **RevPAR** | Revenue Per Available Room — total room revenue / total available rooms |
+| **OTA** (Online Travel Agent) | Booking platforms like MakeMyTrip, Booking.com |
+| **OLTP** (Online Transaction Processing) | "Run the business" databases — many small writes |
+| **OLAP** (Online Analytical Processing) | "Understand the business" warehouses — few large reads |
+| **ETL** (Extract, Transform, Load) | Pull data from sources, reshape it, write to a warehouse |
+| **Data warehouse** | A central analytics database storing history in a query-friendly shape |
+| **Fact table** | The events table — bookings, daily aggregates. Numbers you sum live here. |
+| **Dimension table** | Context tables — hotels, rooms, dates. Adjectives describing the events. |
+| **Star schema** | One fact table joined to flat dim tables — the BI standard |
+| **Snowflake schema** | Star schema where dims are themselves normalized into more tables |
+| **Normalization** | Splitting data across tables to reduce redundancy |
+| **Denormalization** | Pre-joining data into wider tables for analytics speed |
+| **`merge` / join** | Combine two tables on a shared key |
+| **Inner / left / outer join** | Which rows survive when keys do not match in both tables |
+| **`groupby`** | Pandas split-apply-combine across categories |
+| **Quantile** | A cut point: 0.99 quantile = the value below which 99% of data sits |
+| **Outlier** | An extreme value that distorts averages |
+| **Cancellation rate** | Cancelled bookings / total bookings |
+| **Insight** | A sentence connecting a number to a business decision |
+| **Stakeholder / GM** | The non-technical decision-maker who reads your conclusion, not your code |
+| **Notebook** | A `.ipynb` file mixing code, output, and markdown |
+
+## Further reading
+- Foundations used here: [../01-basics/07-eda-pandas-matplotlib-seaborn.md](../01-basics/07-eda-pandas-matplotlib-seaborn.md)
+- Distribution + outlier theory: [../../05-math-statistics/01-foundations/04-distributions.md](../../05-math-statistics/01-foundations/04-distributions.md)
+- The other project: [02-expense-tracker.md](02-expense-tracker.md)
+- BI-style hypothesis testing on lifts: [../../05-math-statistics/03-inferential/02-hypothesis-testing.md](../../05-math-statistics/03-inferential/02-hypothesis-testing.md)

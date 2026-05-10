@@ -6,6 +6,73 @@
 
 ---
 
+## In one sentence
+The **context window** is how much text the model can look at in one call, and **temperature** is how adventurous it gets when picking the next token — together they're the two most important knobs on every LLM API.
+
+## Real-world analogy
+Picture a chef cooking from memory. The **context window** is how big their kitchen counter is — they can only chop ingredients laid out in front of them. **Temperature** is how willing they are to improvise: a cold-headed chef always reaches for the same go-to recipe; a hot-headed one experiments. Tiny counter + cold chef = predictable, fast, cheap. Big counter + hot chef = creative, sometimes wild.
+
+## The intuition (plain English)
+- The model can only "see" a bounded number of tokens per call. That bound is the context window.
+- Bigger windows feel magical (drop in a whole book) but cost more and recall less reliably in the middle.
+- After computing a probability over all possible next tokens, the model has to pick one — temperature decides how flat or peaky the distribution looks.
+- Temperature 0 = always pick the highest probability token. Temperature 1+ = let lower-ranked tokens win sometimes.
+- For production, default to temperature 0 and a tight `max_tokens` until you have a good reason to do otherwise.
+
+## Mini worked example — same prompt, two temperatures
+
+Prompt: *"Write a one-line tagline for a coffee shop."*
+
+```python
+import anthropic
+client = anthropic.Anthropic()
+
+for T in [0.0, 1.0]:
+    resp = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=40,
+        temperature=T,
+        messages=[{"role": "user", "content": "Write a one-line tagline for a coffee shop."}],
+    )
+    print(f"T={T}: {resp.content[0].text}")
+```
+
+Sample outputs (illustrative):
+
+```
+T=0.0: "Brewed fresh, served warm."                          # safe, predictable
+T=0.0: "Brewed fresh, served warm."                          # same again
+T=1.0: "Where mornings begin and Mondays surrender."         # creative
+T=1.0: "Steam, bean, repeat — life on caffeine."             # different each run
+```
+
+Same model, same prompt — temperature changed everything.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    A[Your prompt + history] --> B{Fits in context window?}
+    B -- yes --> C[Send to model]
+    B -- no --> D[Chunk + RAG<br/>or summarize]
+    D --> C
+    C --> E[Model emits<br/>logits over vocab]
+    E --> F[Apply temperature<br/>logits / T]
+    F --> G[Apply top-p / top-k<br/>filter]
+    G --> H[Sample next token]
+    H --> I{stop?}
+    I -- no --> H
+    I -- yes --> J[Final response]
+```
+
+## Why this matters
+- Context drives cost: a 200K-token call costs ~50× more than a 4K one.
+- Temperature drives reproducibility: at T=0 your tests are stable; at T=1 they're flaky.
+- "Lost in the middle" means stuffing everything into a long context loses recall on middle content — that's why RAG often wins.
+- Prompt caching turns repeated long prefixes from a budget killer into a near-free reuse.
+
+---
+
 ## 1. Context window — the LLM's working memory
 
 The **context window** is the maximum number of tokens (input + output combined) the model can attend to in a single call.

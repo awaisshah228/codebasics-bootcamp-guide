@@ -6,6 +6,79 @@
 
 ---
 
+## In one sentence
+The **ROC curve** plots how well your classifier separates positives from negatives across every possible threshold, and **AUC** distills that whole curve into one number — the probability that a random positive ranks higher than a random negative.
+
+## Real-world analogy
+Imagine a pile of resumes for one job opening. You give each one a "fit score" and want to invite the top few for interviews. A perfect ranker puts all the qualified candidates above all the unqualified ones — you'd invite the top 10 and never miss a good fit. **AUC = 1.0**. A random ranker mixes them — half your invites are wasted. **AUC = 0.5**. ROC and AUC measure how well a classifier *ranks* cases, regardless of where you draw the "invite/don't invite" line.
+
+## The intuition (plain English)
+1. Your classifier outputs a probability for each example, not just a label.
+2. As you slide the decision threshold from 1.0 down to 0.0, you flag more positives. Both **TPR** (recall) and **FPR** (false-alarm rate) rise — the question is *how fast* TPR rises relative to FPR.
+3. Plot (FPR, TPR) for every threshold. A great classifier shoots up the y-axis fast (catches positives) before FPR rises. A bad one rises diagonally (random).
+4. **AUC** is the area under that curve. AUC = 0.5 random; AUC = 1.0 perfect.
+5. **PR-AUC** (precision-recall AUC) is more honest under extreme imbalance — ROC can stay high while precision is awful.
+
+## Mini worked example — 6 patients, 2 truly sick
+
+```
+patient   actual    model_prob
+   A        sick      0.9
+   B        sick      0.7
+   C        healthy   0.6
+   D        healthy   0.4
+   E        sick      0.3
+   F        healthy   0.1
+```
+
+Sweep threshold from 1.0 to 0.0. Each threshold gives one (FPR, TPR) point:
+
+```
+threshold   flagged       TP  FP  FN  TN     TPR=TP/2   FPR=FP/4
+   0.95     none           0   0   2   4     0.0         0.0
+   0.65     A              1   0   1   4     0.5         0.0
+   0.55     A,B            2   0   0   4     1.0         0.0    ← perfect spot
+   0.35     A,B,C          2   1   0   3     1.0         0.25
+   0.20     A,B,C,D        2   2   0   2     1.0         0.50
+   0.05     A,B,C,D,E,F    2   2   0   2 ... actually all 6 — TPR=1, FPR=1
+```
+
+The curve hugs the top-left corner up to threshold 0.55 — that's the sweet spot. Calculating AUC by trapezoid: ≈ 0.875. Strong model.
+
+If patient E (sick, prob 0.3) had been ranked above patient C (healthy, prob 0.6), AUC would be 1.0. The curve sees ranking errors directly.
+
+## At-a-glance — reading ROC
+
+```
+   TPR
+    1 ┤             ╭─────────         <- great model, hugs top-left
+      │           ╭/
+      │         ╭/                      AUC area:
+      │      ╭/                           1.0  perfect
+      │    ╭/                             0.9  strong
+      │  ╭/      ─ ─ ─ ─ ─ random         0.7  decent
+    0 ┤╭/  ─ ─ ─ ─ ─                      0.5  random
+      └──────────────────────► FPR
+       0                       1
+```
+
+```mermaid
+flowchart LR
+    A[ROC curve only] --> B{Imbalance?}
+    B -- "balanced or modest" --> ROC[Use ROC-AUC]
+    B -- "extreme &lt;5% positives" --> PR[Use PR-AUC<br/>aka Average Precision]
+    ROC --> Th[Pick operating threshold:<br/>Youden's J, closest to 0,1, or business cost]
+    PR --> Th
+```
+
+## Why this matters
+- **Threshold-independent comparison.** Two models can both report "85% accuracy at threshold 0.5" but have very different AUCs — the one with higher AUC is genuinely better at ranking.
+- **Real production decisions are about thresholds.** Operations teams set "review top 1000 cases per day" → translates to a threshold. AUC tells you how well your model would do at *any* such threshold.
+- **Cost-benefit analysis** translates AUC into dollars: profit per TP, cost per FP, cost per FN — pick the threshold that maximizes expected profit.
+- **Credit-risk project** reports both ROC-AUC and Gini (= 2·AUC − 1) because Gini is the regulator-standard metric.
+
+---
+
 ## 1. The setup
 
 A binary classifier outputs a probability for each example. To turn that into a 0/1 prediction, you choose a threshold.
@@ -221,3 +294,40 @@ ax[1].plot(rec, prec); ax[1].set_title("Precision-Recall")
 - [ ] Why do tree ensembles often have poor calibration?
 - [ ] Walk through a decision: "should we use threshold 0.3 or 0.5?" given a confusion matrix.
 - [ ] Compute Youden's J and explain when use it.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **ROC curve** | Plot of TPR (recall) vs FPR across all decision thresholds |
+| **TPR (True Positive Rate)** | Same as recall: TP / (TP + FN) |
+| **FPR (False Positive Rate)** | FP / (FP + TN) — how often we flag a true negative |
+| **AUC (Area Under the ROC Curve)** | Single number summary of the ROC. 0.5 = random; 1.0 = perfect |
+| **AUC interpretation** | Probability that a random positive ranks higher than a random negative |
+| **Ranking metric** | A metric that grades the *order* of predictions, not their absolute values |
+| **Calibration** | Whether predicted probabilities match real-world frequencies |
+| **PR curve (Precision-Recall curve)** | Plot of precision vs recall across thresholds — better for rare events |
+| **PR-AUC / Average Precision** | Area under the PR curve — preferred over ROC-AUC under extreme imbalance |
+| **Decision threshold** | The probability cutoff for predicting positive (default 0.5) |
+| **Operating point** | The (precision, recall) you actually deploy — pick via Youden's J or business cost |
+| **Youden's J** | TPR − FPR — pick the threshold maximizing this for "balanced" tradeoff |
+| **Closest to (0, 1)** | Geometric strategy: pick threshold minimizing distance to top-left corner |
+| **Cost-benefit analysis** | Choose threshold by maximizing `TP·B − FP·C − FN·K` (dollars) |
+| **Gini coefficient** | `2·AUC − 1` — banking-industry standard credit-risk metric |
+| **KS statistic (Kolmogorov-Smirnov)** | Max gap between cumulative distributions of positives vs negatives — common in credit-risk |
+| **Confusion matrix at threshold** | The 2×2 TP/FP/FN/TN counts at your chosen threshold |
+| **`roc_curve` (sklearn)** | Function returning `(fpr, tpr, thresholds)` |
+| **`roc_auc_score`** | Function returning AUC directly |
+| **`precision_recall_curve`** | Returns `(precision, recall, thresholds)` |
+| **`average_precision_score`** | Returns PR-AUC |
+| **`predict_proba`** | Required for ROC/AUC — gives the score per sample |
+| **`CalibratedClassifierCV`** | sklearn wrapper to fix poorly calibrated probabilities |
+| **Multiclass ROC (OvR)** | Compute one ROC per class against the rest — average via `multi_class="ovr"` |
+
+## Further reading
+- Previous: [06-class-imbalance.md](06-class-imbalance.md)
+- Next module: [../03-ensemble/01-bagging-random-forest.md](../03-ensemble/01-bagging-random-forest.md)
+- Credit-risk project (uses AUC + Gini + KS): [../06-projects/02-credit-risk-classification.md](../06-projects/02-credit-risk-classification.md)
+- Hypothesis-testing connection (Type I = FPR): [../../05-math-statistics/03-inferential/02-hypothesis-testing.md](../../05-math-statistics/03-inferential/02-hypothesis-testing.md)

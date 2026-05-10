@@ -5,6 +5,60 @@
 
 ---
 
+## In one sentence
+**NumPy** gives Python a fast, fixed-type, multi-dimensional array (`ndarray`) and lets you do math on whole arrays at once, which is 50–100× faster than Python for-loops.
+
+## Real-world analogy
+A Python list is like a row of mismatched lockers — each one a different size and content. A NumPy array is a grid of identical mailboxes glued together: same size, same type, packed tight. That is why `array * 2` doubles every value instantly, while a Python list would need a manual loop.
+
+## The intuition (plain English)
+Arrays are stored in contiguous memory with a fixed `dtype` (e.g., `float64`) — that is why they are fast. **Vectorization** means writing `a + b` instead of `for i: c[i] = a[i] + b[i]`. **Broadcasting** lets arrays of different but compatible shapes interact (e.g., adding a row vector to a matrix). `axis=0` collapses rows (one number per column); `axis=1` collapses columns (one number per row). NumPy is the foundation under pandas, scikit-learn, PyTorch, and TensorFlow.
+
+## Mini worked example
+Compute average exam score per student in 3 lines:
+
+```python
+import numpy as np
+
+scores = np.array([
+    [78, 82, 91, 67],     # student 0
+    [85, 73, 88, 90],     # student 1
+    [62, 75, 80, 70],     # student 2
+])
+
+per_student = scores.mean(axis=1)        # collapse columns → one avg per row
+print(per_student)                       # [79.5  84.   71.75]
+
+print(scores[per_student > 80])          # boolean mask → rows for top performers
+# [[85 73 88 90]]
+```
+
+No `for` loop, no `+= 1`, just `.mean(axis=1)` and a boolean filter.
+
+## At-a-glance
+
+```
+shape (3, 4)
+                axis=1 (collapses cols → one num per row)
+                ─────────────────────►
+              ┌─────────────────────┐
+   axis=0     │ 78  82  91  67      │
+   (collapses │ 85  73  88  90      │
+    rows →    │ 62  75  80  70      │
+    one num   └─────────────────────┘
+    per col)
+
+   .sum(axis=0) → [225, 230, 259, 227]   (4 numbers — one per col)
+   .sum(axis=1) → [318, 336, 287]        (3 numbers — one per row)
+```
+
+## Why this matters
+- Every later module (pandas, scikit-learn, PyTorch) sits on NumPy — this is the substrate.
+- Vectorized code is shorter, faster, and less buggy than manual loops.
+- Knowing axes and broadcasting is the difference between fluent and frustrated DS work.
+
+---
+
 ## 1. Why NumPy
 
 Two reasons:
@@ -246,3 +300,43 @@ This pattern — `array.mean(axis=...)`, then mask + index — is the bread and 
 - [ ] What does `arr.reshape(-1, 4)` do?
 - [ ] Difference between `np.zeros(5)` and `np.zeros((5,))`?
 - [ ] How do I generate 100 normally-distributed random numbers?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **NumPy** | The numerical computing library that gives Python fast arrays |
+| **`ndarray`** | NumPy's n-dimensional array type |
+| **`shape`** | Tuple of sizes per dimension — `(3, 4)` is 3 rows × 4 columns |
+| **`ndim`** | Number of dimensions — 1 for vector, 2 for matrix, 3+ for tensor |
+| **`size`** | Total number of elements |
+| **`dtype`** | The element type — `int64`, `float64`, `bool`, etc. |
+| **Vectorization** | Doing array math without a Python loop |
+| **Broadcasting** | Operations on arrays of different but compatible shapes — smaller dims stretch to fit |
+| **`axis=0`** | Collapses rows — result has one number per column |
+| **`axis=1`** | Collapses columns — result has one number per row |
+| **Element-wise** | Operation done position-by-position (`a * b` multiplies pairs) |
+| **Matrix multiplication** | Linear-algebra multiply with `@` or `np.dot` |
+| **`@` operator** | Matrix multiply (Python 3.5+) |
+| **Hadamard product** | Element-wise multiply — what `*` does on arrays |
+| **Transpose (`.T`)** | Swap rows and columns |
+| **Identity matrix** | Square matrix with 1s on diagonal, 0s elsewhere — `np.eye(n)` |
+| **Determinant** | A scalar describing how a matrix scales space |
+| **Inverse** | The matrix that undoes another — `A @ A_inv == I` |
+| **Eigenvalue / eigenvector** | Special direction unchanged by a matrix multiply, scaled by the eigenvalue |
+| **Slicing** | Selecting a sub-array with ranges — `A[0:2, 1:3]` |
+| **Boolean indexing** | Selecting with a mask: `a[a > 4]` |
+| **Fancy indexing** | Selecting with arrays of indices: `a[[0, 2, 4]]` |
+| **View vs copy** | A slice usually points at the same memory — modify it and the original changes |
+| **`reshape`** | Change shape without changing data; `-1` means "infer this dim" |
+| **`flatten`** | Make a copy of the array as 1D |
+| **`concatenate / vstack / hstack`** | Stack arrays end-to-end / row-wise / column-wise |
+| **`linspace`** | Equally spaced values between two endpoints |
+| **`arange`** | Like Python's `range` but produces an array |
+
+## Further reading
+- Next: [07-eda-pandas-matplotlib-seaborn.md](07-eda-pandas-matplotlib-seaborn.md)
+- Math foundations module: [../../05-math-statistics/01-foundations/README.md](../../05-math-statistics/01-foundations/README.md)
+- Why DL frameworks build on NumPy: [../../07-deep-learning/architectures-and-math.md](../../07-deep-learning/architectures-and-math.md)

@@ -5,6 +5,58 @@
 
 ---
 
+## In one sentence
+A **Large Language Model (LLM)** is a giant transformer trained to predict the next token of text — and once trained at scale, that single skill becomes a general-purpose engine for chat, code, extraction, and tool use.
+
+## Real-world analogy
+Picture an intern who has read most of the public internet and is shockingly good at the game "finish my sentence". You feed them the first half of any text — *"The customer wants a refund because"* — and they reflexively write a plausible continuation. Stack millions of those guesses together and you get a chat assistant.
+
+## The intuition (plain English)
+- An LLM is a function that turns text into more text, one token at a time.
+- It learned by reading huge piles of text and being graded on how well it guessed the next token.
+- The "smartness" comes from scale — billions of parameters, trillions of tokens of training data.
+- Three training stages turn a raw next-token predictor into a chat assistant: pre-training, instruction tuning, and preference alignment.
+- Every API knob you'll touch (system prompt, temperature, tools, context window) is a steering wheel on that next-token engine.
+
+## Mini worked example — predict-the-next-token
+
+Suppose the model sees:
+
+```
+"The customer is asking for a refund because the package"
+```
+
+Internally it scores every token in its vocabulary as the possible next word:
+
+| Candidate token | Probability |
+|---|---|
+| ` arrived`  | 0.41 |
+| ` was`      | 0.27 |
+| ` never`    | 0.14 |
+| ` is`       | 0.08 |
+| ... (50,000+ others) | tiny |
+
+It samples one (say ` arrived`), appends to the prompt, and reruns the whole network to pick the next token. Repeat until it emits an end-of-sequence token or hits `max_tokens`. That's the entire generation loop — even for the longest essay.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    A[Pre-training<br/>predict next token<br/>on internet text] --> B[Instruction tuning<br/>SFT pairs:<br/>instruction → response]
+    B --> C[Preference alignment<br/>RLHF / DPO from<br/>human rankings]
+    C --> D[Chat-ready LLM<br/>Claude / GPT / Gemini]
+    D --> E[Your API call]
+    E --> F[Tokens stream out]
+```
+
+## Why this matters
+- Token pricing drives every cost decision — knowing what a token is tells you why long prompts hurt.
+- The three training stages explain why a base model "completes" but a chat model "answers".
+- "Just" next-token prediction tells you why hallucinations happen and why grounding (RAG) helps.
+- Every later module (prompts, RAG, agents, fine-tuning) is a clever wrapper around this loop.
+
+---
+
 ## 1. What an LLM is, in one paragraph
 
 An LLM is a **transformer decoder** trained on huge amounts of text to predict the **next token** given previous tokens. After enough scale (parameters + data + compute), the model exhibits emergent capabilities — reasoning, instruction-following, world knowledge.
@@ -208,3 +260,41 @@ For Codebasics' projects: usually a mid-tier model (Sonnet, GPT-4o-mini) is the 
 - [ ] Pick a model for: code generation / cheap classification / privacy-sensitive workload.
 - [ ] Why is "trust LLM math" a bad idea?
 - [ ] Count tokens for a string in your favorite model.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **LLM** | Large Language Model — a transformer trained on text to predict the next token. |
+| **Token** | Subword chunk the model reads and writes, roughly 4 English characters. |
+| **Tokenizer** | Code that converts text into token IDs and back (BPE, SentencePiece, tiktoken). |
+| **Vocabulary** | The fixed set of tokens the model knows (typically 30K-200K). |
+| **Transformer** | Neural network architecture that uses self-attention to mix tokens. |
+| **Decoder-only** | Architecture variant that generates left-to-right; used by all modern chat LLMs. |
+| **Pre-training** | First training stage — predict next token on huge text corpora. |
+| **SFT** | Supervised Fine-Tuning — instruction-tuning on (prompt, response) pairs. |
+| **RLHF** | Reinforcement Learning from Human Feedback — train on human preference rankings. |
+| **DPO** | Direct Preference Optimization — simpler alternative to RLHF. |
+| **Base model** | A pre-trained model that completes text but doesn't follow instructions. |
+| **Instruction-tuned model** | A model that has been SFT'd to follow instructions. |
+| **Foundation model** | A pre-trained model meant to be adapted to many tasks. |
+| **Parameters** | Trainable weights in the network (more = more capacity). |
+| **Context window** | Maximum tokens the model can read+write in one call. |
+| **System / user / assistant** | Roles in a chat-format message list. |
+| **System prompt** | High-priority instructions defining the assistant's role and rules. |
+| **Streaming** | Sending tokens to the client as they're generated, instead of waiting. |
+| **Tool use / function calling** | Mechanism for the model to emit structured JSON calls to your code. |
+| **Embedding** | A fixed-length vector representing a piece of text. |
+| **Prompt caching** | Discount mechanism for reusing identical prefixes across calls. |
+| **Multimodal** | Models that accept image / audio inputs alongside text. |
+| **Hallucination** | A confident but false output. |
+
+## Further reading
+- Previous: [01-intro-applications.md](./01-intro-applications.md)
+- Next: [03-context-temperature.md](./03-context-temperature.md)
+- Module overview: [../01-llm-fundamentals.md](../01-llm-fundamentals.md)
+- Transformer math: [../../07-deep-learning/04-sequence/03-transformer-architecture.md](../../07-deep-learning/04-sequence/03-transformer-architecture.md)
+- Attention: [../../07-deep-learning/04-sequence/04-attention.md](../../07-deep-learning/04-sequence/04-attention.md)
+- Anthropic — [Models overview](https://docs.anthropic.com/en/docs/about-claude/models)

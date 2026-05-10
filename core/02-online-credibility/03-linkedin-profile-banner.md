@@ -6,6 +6,26 @@
 
 ---
 
+## In one sentence
+LinkedIn is the **dominant funnel** for data/AI roles — a recruiter spends 7 seconds on your profile, so the headline, banner, and pinned projects need to do all the heavy lifting up front.
+
+## The 7-second test — at-a-glance
+
+```mermaid
+flowchart TB
+    R[Recruiter clicks profile] --> Q1{Photo + headline<br/>tells me who + what?}
+    Q1 -- yes --> Q2{Featured projects<br/>visible without scrolling?}
+    Q1 -- no --> Bounce[Recruiter leaves<br/>profile filed under: maybe later]
+    Q2 -- yes --> Q3{About section opens<br/>with concrete recent work?}
+    Q2 -- no --> Bounce
+    Q3 -- yes --> Engage[Recruiter scrolls →<br/>InMail you]
+    Q3 -- no --> Bounce
+```
+
+If any of those "no" branches fires, you don't get the InMail. Fix them in this order: photo → headline → banner → pinned/Featured → About first paragraph.
+
+---
+
 ## Why LinkedIn first
 
 For data / AI roles, LinkedIn is **the dominant funnel**:
@@ -162,3 +182,32 @@ Good banner has 1 of these:
 - [ ] At least 10 skills, top-3 set deliberately
 - [ ] Custom URL set
 - [ ] First post live
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Headline** | The most-read line on your profile — under your name. Override the default. |
+| **Banner** | The big image at the top of your profile (1584×396 px) |
+| **About section** | Your 3-paragraph pitch under the photo |
+| **Featured section** | Profile area for pinning your best 3-6 posts/projects/articles |
+| **Open to Work** | LinkedIn badge signaling you want recruiter outreach (visible to recruiters only) |
+| **Skill Assessment** | Free LinkedIn quiz that earns a verified badge for Python/SQL/etc. |
+| **Recommendation** | A LinkedIn endorsement written by someone who's worked with you |
+| **Custom URL** | `linkedin.com/in/firstname-lastname` (no random digits) — set in profile editor |
+| **InMail** | LinkedIn's paid messaging feature recruiters use to reach you |
+| **Connection request** | A request to add someone to your network — always personalize the note |
+| **Endorsements** | One-click skill validations from your network — less weighty than recommendations |
+| **Profile completeness** | LinkedIn's score; aim for 80%+ — drives search visibility |
+| **Canva / Figma** | Free design tools for making banners |
+| **400×400 / 1584×396** | Recommended sizes for LinkedIn photo and banner |
+| **ATS-friendly** | Resume formatted so applicant tracking systems can parse all sections |
+| **SEO (Search Engine Optimization)** | Optimizing what shows up when someone Googles your name + role |
+| **Personal note (connection)** | The 1-2 sentence message attached to a connection request — vastly improves accept rate |
+| **Niche** | Domain specialization that makes you searchable for specific roles |
+
+## Further reading
+- Next: [04-python-projects-to-github.md](04-python-projects-to-github.md)
+- Build-in-public templates: [../00-bootcamp-introduction/04-build-in-public-intro.md](../00-bootcamp-introduction/04-build-in-public-intro.md)

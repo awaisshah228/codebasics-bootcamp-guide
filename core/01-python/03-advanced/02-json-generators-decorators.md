@@ -5,6 +5,69 @@
 
 ---
 
+## In one sentence
+**JSON** is the universal data format for APIs, **generators** stream values one-at-a-time without holding the whole list in memory, and **decorators** wrap a function to add behavior (logging, caching, retries) without touching the original code.
+
+## Real-world analogy
+JSON is the universal shipping container — every truck (language) understands it. A generator is a Pez dispenser — one candy pops out at a time, you never carry the whole pack. A decorator is gift wrap — same gift inside, but the wrapper adds a label, a ribbon, or a security tag without changing the gift.
+
+## The intuition (plain English)
+Use `json.dumps` to serialize a Python dict to a JSON string and `json.loads` to parse one back. **Generators** use `yield` — each call resumes where it left off, producing values lazily, which is how you process a 10 GB log file with 50 MB of memory. **Decorators** are functions that take a function and return a wrapped version — perfect for cross-cutting concerns like timing, retries, caching (`@lru_cache`), or auth checks. Always pair decorators with `@functools.wraps(fn)` so the wrapped function keeps its name and docstring.
+
+## Mini worked example
+A timing decorator + a generator reading a file lazily:
+
+```python
+import time, functools, json
+
+def timeit(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        t0 = time.perf_counter()
+        result = fn(*args, **kwargs)
+        print(f"{fn.__name__}: {time.perf_counter()-t0:.3f}s")
+        return result
+    return wrapper
+
+# generator: read JSON-Lines file one record at a time
+def stream_records(path):
+    with open(path) as f:
+        for line in f:                       # `f` is itself a generator
+            yield json.loads(line)
+
+@timeit
+def count_above(path, threshold):
+    return sum(1 for rec in stream_records(path) if rec["amount"] > threshold)
+
+# count_above("expenses.jsonl", 100)
+# → count_above: 0.045s
+```
+
+`stream_records` never loads the whole file. `@timeit` adds timing without touching `count_above`'s logic.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    PyDict[Python dict] -- json.dumps --> Str[JSON string]
+    Str -- json.loads --> PyDict
+
+    Func[def fn -- yield x] --> Gen[generator object]
+    Gen -- next -- > Val1[value 1]
+    Gen -- next -- > Val2[value 2]
+    Gen -- exhausted --> Stop[StopIteration]
+
+    Original[def slow_call] --> Wrap[decorator wraps it]
+    Wrap --> New[new fn with logging,<br/>caching, retries]
+```
+
+## Why this matters
+- Every API in the world speaks JSON — `json.loads` and `json.dumps` are bread-and-butter.
+- Generators turn "out of memory" errors into one-line fixes for big data.
+- Decorators are everywhere in modern Python (`@app.get`, `@dataclass`, `@pytest.fixture`) — knowing how they work demystifies frameworks.
+
+---
+
 ## 1. JSON
 
 JSON = JavaScript Object Notation. Universal data interchange format. Every API speaks it. Python's stdlib `json` module handles it.
@@ -333,3 +396,43 @@ def fetch_user(user_id):
 - [ ] When would I use `@lru_cache`?
 - [ ] How does `yield from` differ from `yield`?
 - [ ] Why doesn't `for x in gen: ...` work twice on the same generator object?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **JSON** (JavaScript Object Notation) | Universal text data format used by nearly every web API |
+| **Serialize** | Turn a Python object into JSON text — `json.dumps` |
+| **Deserialize** | Turn JSON text back into a Python object — `json.loads` |
+| **`json.dump` / `json.load`** | File-based versions (note: no `s`) |
+| **`indent=`** | Pretty-print with N spaces of indentation |
+| **JSON Lines (`.jsonl`)** | One JSON object per line — streamable |
+| **Custom encoder** | A class that teaches `json` how to serialize a non-default type |
+| **Iterable** | Anything you can loop over (`for x in obj:`) |
+| **Iterator** | An object that produces values one-at-a-time and remembers position |
+| **`__iter__`** | Returns an iterator |
+| **`__next__`** | Returns the next value or raises `StopIteration` |
+| **Generator** | A special iterator created with a function that uses `yield` |
+| **`yield`** | Pause the function, produce a value, resume on next call |
+| **`yield from`** | Delegate iteration to another iterable |
+| **Generator expression** | Generator built with `()` — like a list comp but lazy |
+| **Lazy evaluation** | Compute on demand instead of upfront |
+| **Decorator** | A function that takes a function and returns a wrapped one |
+| **`@decorator`** | Syntax sugar for `fn = decorator(fn)` |
+| **`functools.wraps`** | Preserves the wrapped function's name, docstring, etc. |
+| **`*args, **kwargs`** | Forward all positional + keyword args inside a wrapper |
+| **`lru_cache`** | Decorator that caches recent return values — memoization |
+| **Memoization** | Caching results so repeated calls return instantly |
+| **`cached_property`** | Compute a property once, reuse the cached value on the same instance |
+| **`@property`** | Makes a method look like an attribute |
+| **`@staticmethod`** | A method that doesn't take `self` or `cls` |
+| **`@classmethod`** | A method that takes the class as `cls` — useful for alternate constructors |
+| **Cross-cutting concern** | Logic (logging, auth, retries) that applies across many functions |
+| **`abc.abstractmethod`** | Marks a method that subclasses must implement |
+
+## Further reading
+- Comprehensions (related): [01-comprehensions-sets.md](01-comprehensions-sets.md)
+- APIs that produce/consume JSON: [03-apis-fastapi.md](03-apis-fastapi.md)
+- Decorator-heavy frameworks: [04-logging-pytest-pydantic-mysql.md](04-logging-pytest-pydantic-mysql.md)

@@ -5,6 +5,83 @@
 
 ---
 
+## In one sentence
+**K-Means** discovers groups in unlabeled data by repeatedly placing k "anchor points" (centroids) and assigning each row to its nearest anchor — without anyone telling it what the right groups are.
+
+## Real-world analogy
+A retail chain wants to open 4 new stores in a city, placed so each resident is close to one. Plot every resident on a map, drop 4 random store pins, then iterate: assign each resident to their nearest pin → move each pin to the geographic center of its assigned residents → repeat. After a few rounds, the pins settle into the optimal locations. K-Means does this, except the "map" is your feature space and "residents" are data rows.
+
+For customer segmentation: treat each customer as a point with axes like spending, recency, age. K-Means finds 4 clusters → "loyal big spenders", "lapsed", "newcomers", "price sensitive" — without you ever labeling anyone.
+
+## The intuition (plain English)
+1. Pick k (the number of clusters you want — e.g., 4).
+2. Drop k random initial centroids in feature space.
+3. **Assign step**: every data point joins the cluster of the closest centroid.
+4. **Update step**: every centroid moves to the mean of its assigned points.
+5. Repeat 3–4 until nothing changes (or a max iteration hit).
+
+It's an unsupervised algorithm — no labels given. You discover the groups instead of being told. The catch: you must pick k yourself, and K-Means assumes clusters are roughly spherical and similar size.
+
+## Mini worked example — clustering 6 customers by 2 features
+
+```
+customer:  spend  recency
+   A        100      30
+   B        110      35
+   C        105      28
+   D        500       3
+   E        510       5
+   F        490       8
+```
+
+Pick k=2. Random initial centroids: c1 = (300, 20), c2 = (200, 25).
+
+Iteration 1 (assign each to nearest):
+```
+A,B,C ─► all closer to c2 (200, 25)        → mean = (105, 31)
+D,E,F ─► all closer to c1 (300, 20)        → mean = (500,  5.3)
+```
+
+Update centroids: c1 = (500, 5.3), c2 = (105, 31).
+
+Iteration 2:
+- Assign step → same groupings.
+- Update step → centroids unchanged → **converged**.
+
+Two clean clusters: low-spend / high-recency and high-spend / low-recency. (You'd label them "lapsed" vs. "active big spenders".)
+
+## At-a-glance — algorithm + picking k
+
+```
+       Iteration                ●●●        ●●●            ●●●        ●●●
+              0:    ★            ●●            ●● ★            ●●            ●●
+                       ★    ●●●                          ★ ●●●
+                          ●●●                                ●●●
+
+Iteration 1:  ★ moves to mean of its assigned points.
+Iteration 2:  Reassign → centroids barely move → converged.
+```
+
+```mermaid
+flowchart TB
+    Start[Standardize features] --> Init[k-means++ initialization<br/>spread initial centroids]
+    Init --> Assign[Assign each point to nearest centroid]
+    Assign --> Update[Update each centroid to assigned points' mean]
+    Update --> Check{Centroids moved?}
+    Check -- yes --> Assign
+    Check -- no --> Pick[Pick k via elbow method / silhouette]
+    Pick --> Done[Interpret + name clusters]
+```
+
+## Why this matters
+- **Most-used unsupervised algorithm.** Customer segmentation, document grouping, image color quantization.
+- **Always scale features** — K-Means is distance-based, so a feature in millions dominates one in tens.
+- **Pick k via elbow + silhouette**, not gut feel.
+- **Fails on non-spherical or unequal-density clusters** — DBSCAN or Gaussian Mixture handle those.
+- **Building block for AtliQo Bank-style customer segmentation** — once you have clusters, name them and let business teams target each.
+
+---
+
 ## 1. The unsupervised setting
 
 No labels. Just `X`. Goal: discover structure — groups, anomalies, lower-dimensional representations.
@@ -221,3 +298,42 @@ Or **t-SNE / UMAP** for visualization.
 - [ ] When use DBSCAN over K-Means?
 - [ ] What's `n_init` and `k-means++`?
 - [ ] How would you cluster customer transaction histories?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Unsupervised learning** | Learning patterns from data without labels (no y) |
+| **Clustering** | Grouping rows so similar rows land together |
+| **K-Means** | Cluster algorithm that minimizes within-cluster squared distance |
+| **k** | Number of clusters — you pick it |
+| **Centroid** | The mean (center) of a cluster |
+| **Assignment step** | Each point joins the cluster of its closest centroid |
+| **Update step** | Each centroid moves to the mean of its assigned points |
+| **Convergence** | Centroids stop moving (or maximum iterations reached) |
+| **Inertia** | Within-cluster sum of squared distances — K-Means minimizes this |
+| **Elbow method** | Plot inertia vs k; pick the k where the curve bends |
+| **Silhouette score** | Range −1 to 1; how well each point fits its cluster vs the next-nearest |
+| **k-means++** | Smart initialization that spreads starting centroids — sklearn default |
+| **`n_init`** | Number of random restarts; best result wins |
+| **Voronoi cells** | Regions of feature space where each centroid is the nearest — what K-Means produces |
+| **Euclidean distance** | Straight-line distance between two points — what K-Means uses |
+| **Standardization** | Scale features to mean 0, std 1 — required for K-Means |
+| **DBSCAN** | Density-based clustering — finds arbitrary shapes, marks noise, no k needed |
+| **Agglomerative clustering** | Hierarchical — builds a tree of clusters bottom-up |
+| **Gaussian Mixture Model (GMM)** | Soft clustering — each point gets a probability per cluster |
+| **PCA (Principal Component Analysis)** | Reduce feature dimensions to 2–10 before clustering high-dim data |
+| **t-SNE / UMAP** | Non-linear dim-reduction great for visualizing clusters in 2D |
+| **RFM** | Recency, Frequency, Monetary — classic customer-segmentation features |
+| **Customer segmentation** | Splitting customers into groups for targeted marketing |
+| **Soft cluster** | Probability of belonging to each cluster (GMM does this) |
+| **Hard cluster** | Each point belongs to exactly one cluster (K-Means does this) |
+| **Feature space** | The multi-dimensional space where data points live |
+
+## Further reading
+- Previous module: [../03-ensemble/03-cross-validation-tuning.md](../03-ensemble/03-cross-validation-tuning.md)
+- Next: [02-vif.md](02-vif.md)
+- AtliQo Bank target-segment context: [../../05-math-statistics/02-atliqo-bank-project](../../05-math-statistics/02-atliqo-bank-project)
+- Distance-based scaling: [../01-foundations/05-preprocessing-encoding.md](../01-foundations/05-preprocessing-encoding.md)

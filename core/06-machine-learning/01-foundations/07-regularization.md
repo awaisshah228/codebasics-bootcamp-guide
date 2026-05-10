@@ -5,6 +5,62 @@
 
 ---
 
+## In one sentence
+**Regularization** adds a "tax on complexity" to your model's loss so it can't go wild fitting noise — L2 (Ridge) gently shrinks all coefficients, L1 (Lasso) shrinks *and* zeros out unimportant ones, and Elastic Net mixes both.
+
+## Real-world analogy
+Imagine a chef whose only goal is to maximize compliments. Without rules, she dumps in every spice in the pantry — some dishes are amazing, most are weird. Now you tax her by `total grams of spice used`. Suddenly she only reaches for the spices that genuinely help. That tax is regularization. **L2** taxes the *square* of each spice gram (so big amounts hurt a lot, small amounts barely register — she shrinks every spice down). **L1** taxes the *absolute* amount (so dropping a spice to zero saves the same as cutting it from 5g to 4g — she'll set rare spices to exactly zero).
+
+## The intuition (plain English)
+Without regularization, an over-flexible linear model can put massive coefficients on noisy features just because it helps the training fit. The model now treats junk as signal.
+
+Regularization changes the loss to `error + λ × penalty(weights)`. Higher λ means "complexity is more expensive" → smaller, simpler weights → less overfitting. Set λ via cross-validation; never guess.
+
+- **L2 (Ridge)** keeps every feature, just shrinks the coefficient sizes. Stable when features are correlated.
+- **L1 (Lasso)** kills useless features outright (coefficient = 0) — automatic feature selection.
+- **Elastic Net** is L1 + L2 — best of both, especially when features are correlated *and* you want sparsity.
+
+## Mini worked example — credit-risk model
+
+You fit a logistic regression on 50 features. Without regularization, every coefficient is non-zero, training accuracy is 92%, test accuracy 73% — overfit.
+
+```
+Plain OLS / no penalty:    coef sizes range from −12 to +18
+Ridge (alpha=1.0):         coef sizes range from −2.1 to +2.8     all features kept
+Lasso (alpha=0.1):         32 of 50 coefs = exactly 0             feature selection!
+ElasticNet (alpha=0.1, l1_ratio=0.5):   18 of 50 coefs = 0
+```
+
+| Model | Train acc | Test acc | Notes |
+|-------|-----------|----------|-------|
+| Plain | 92% | 73% | overfit, 50 features |
+| Ridge | 88% | 84% | smaller coefs, no feature selection |
+| Lasso | 87% | 85% | 18 features kept — easier to explain |
+
+Lasso buys you a smaller, more honest model. Ridge buys you stability. Elastic Net buys you both.
+
+## At-a-glance — pick a regularizer
+
+```mermaid
+flowchart TB
+    Q[Linear / logistic model overfitting?] --> Q1{Many features<br/>likely useless?}
+    Q1 -- yes --> Q2{Features<br/>highly correlated?}
+    Q1 -- no --> Ridge[Use L2 / Ridge<br/>shrink everything smoothly]
+    Q2 -- yes --> EN[Elastic Net<br/>L1 + L2]
+    Q2 -- no --> Lasso[L1 / Lasso<br/>auto feature selection]
+    Ridge --> CV[Pick alpha via<br/>RidgeCV / LassoCV / GridSearchCV]
+    Lasso --> CV
+    EN --> CV
+```
+
+## Why this matters
+- **The cheapest, safest overfit fix** for any linear/logistic model. One line of code, big payoff.
+- **Lasso = automatic feature selection.** Ship a 7-feature model instead of a 50-feature one — easier to explain to regulators (banking, healthcare).
+- **Always scale features first.** Without scaling, the regularizer unfairly punishes whichever feature has bigger units.
+- **Same idea, different names everywhere:** weight decay (NN), shrinkage (boosting), pruning (trees) — all variations on "constrain the model."
+
+---
+
 ## 1. The idea
 
 Add a penalty for **large weights** to the loss function. The model can no longer freely assign huge coefficients to fit noise — it pays a tax.
@@ -193,3 +249,39 @@ The principle is universal: **constrain the model to prevent it from memorizing 
 - [ ] How do you pick `alpha` automatically?
 - [ ] What's the equivalent of regularization in random forest? In XGBoost? In neural nets?
 - [ ] If your training and test errors are both high, will adding more regularization help? Why or why not?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Regularization** | Adding a penalty for model complexity to the loss — fights overfitting |
+| **Penalty term** | The piece added to the loss (`λ × Σ|β|` for L1, `λ × Σβ²` for L2) |
+| **λ (lambda) / alpha** | Strength of the penalty. Higher = simpler model. Pick via cross-validation. |
+| **L1 regularization (Lasso)** | Penalty = sum of absolute weights — produces sparse models (some β = 0) |
+| **L2 regularization (Ridge)** | Penalty = sum of squared weights — shrinks all weights, rarely to zero |
+| **Elastic Net** | Mix of L1 and L2; `l1_ratio` controls the blend |
+| **Sparsity** | Many coefficients exactly zero — Lasso's defining property |
+| **Feature selection** | Picking which features to keep — Lasso does it automatically |
+| **Shrinkage** | Pulling coefficients toward zero — what regularization does to them |
+| **Coefficient** | The β value the model assigns to each feature |
+| **Bias-variance tradeoff** | Regularization adds bias to reduce variance (often a net win) |
+| **Multicollinearity** | Highly correlated features — Lasso picks one arbitrarily, Ridge spreads weight; Elastic Net handles both |
+| **Standardization** | Scaling features to mean 0, std 1 — required before regularizing |
+| **`alpha` (sklearn Ridge/Lasso)** | The λ knob — bigger = more regularization |
+| **`C` (sklearn LogisticRegression/SVM)** | Inverse of regularization: `C = 1/λ` — bigger C = less regularization |
+| **RidgeCV / LassoCV** | sklearn helpers that pick the best alpha via built-in cross-validation |
+| **`np.logspace(-3, 3, 25)`** | A grid of 25 alphas spread on a log scale from 0.001 to 1000 — the standard search range |
+| **Weight decay** | Neural-network name for L2 regularization |
+| **Dropout** | Neural-network regularizer: randomly disable neurons during training |
+| **Early stopping** | Boosting/NN regularizer: stop training when validation stops improving |
+| **OLS (Ordinary Least Squares)** | Linear regression with no regularization — the unconstrained baseline |
+| **Pipeline** | sklearn object chaining preprocessing + regularized model so scaling happens before penalty |
+| **Pruning** | Tree-based "regularization" — cut back branches that don't justify their complexity |
+
+## Further reading
+- Previous: [06-overfit-underfit-bias-variance.md](06-overfit-underfit-bias-variance.md) — the problem regularization solves
+- Next: [../02-classification/01-logistic-regression.md](../02-classification/01-logistic-regression.md) — uses the same L1/L2 levers
+- Multicollinearity check: [../04-unsupervised/02-vif.md](../04-unsupervised/02-vif.md)
+- Tuning alpha via CV: [../03-ensemble/03-cross-validation-tuning.md](../03-ensemble/03-cross-validation-tuning.md)

@@ -5,6 +5,77 @@
 
 ---
 
+## In one sentence
+**FastAPI** is a Python framework that turns your trained model into a typed, documented HTTP API in a few dozen lines — exactly what mobile apps, web frontends, and other services call to get predictions.
+
+## Real-world analogy
+Streamlit is a *food truck* — you sell directly to one customer who walks up. FastAPI is the *commercial kitchen* — chefs cook efficiently and the food gets shipped to many restaurants (frontends, mobile apps, internal tools) through standard delivery (HTTP). Same model, different distribution model.
+
+## The intuition (plain English)
+- A FastAPI app declares **endpoints** (URLs); each endpoint is a Python function decorated with `@app.post(...)` or `@app.get(...)`.
+- The model is loaded **once at startup**, not per request, so every prediction is fast.
+- **Pydantic** typed inputs/outputs give you automatic validation and an interactive docs page at `/docs`.
+- For real production: containerize with **Docker**, host on Render / HuggingFace Spaces / Cloud Run, optionally pair with Streamlit as the UI.
+
+## Mini worked example — `/predict` endpoint
+
+```python
+from fastapi import FastAPI, UploadFile, File
+from PIL import Image
+import io, torch, torch.nn.functional as F
+
+app = FastAPI()
+model = torch.load("model.pt", map_location="cpu").eval()    # loaded ONCE
+CLASSES = ["no_damage", "scratch", "dent", "severe"]
+
+@app.post("/predict")
+async def predict(file: UploadFile = File(...)):
+    img = Image.open(io.BytesIO(await file.read())).convert("RGB")
+    x = preprocess(img).unsqueeze(0)
+    with torch.no_grad():
+        probs = F.softmax(model(x), dim=-1)[0].tolist()
+    return {
+        "prediction": CLASSES[max(range(4), key=lambda i: probs[i])],
+        "probabilities": dict(zip(CLASSES, probs)),
+    }
+```
+
+Run `uvicorn server:app --reload`, open `http://localhost:8000/docs`, click "Try it out" — you have an interactive API.
+
+## At-a-glance — the modern split
+
+```mermaid
+flowchart LR
+    USER[User browser / mobile] --> UI[Streamlit UI<br/>or React frontend]
+    UI -- HTTP POST /predict --> API[FastAPI server]
+    API -- load once --> MODEL[Trained model.pt]
+    API -- response JSON --> UI
+    UI --> USER
+
+    DEV[CI/CD pipeline] --> DOCKER[Docker image]
+    DOCKER --> HOST[Render / HF Spaces / Cloud Run]
+    HOST --> API
+```
+
+```
+   Request flow:
+
+   client ─► POST /predict (multipart image)
+            │
+            ▼
+        FastAPI receives → preprocess → model.eval() forward → softmax
+            │
+            ▼
+   client ◄─ JSON {prediction, probabilities}
+```
+
+## Why this matters
+- The "Streamlit UI calls FastAPI backend" pattern is the standard modern ML demo architecture.
+- Type-checked endpoints (Pydantic) prevent half the bugs you'd otherwise hit.
+- A Dockerized FastAPI server is the **portable artifact** that runs anywhere — a real engineering deliverable on a resume.
+
+---
+
 ## When to use FastAPI
 
 Streamlit is for **demos and dashboards**. FastAPI is for **production model APIs**:
@@ -269,3 +340,44 @@ This is the recommended split: heavy model on FastAPI; UI on Streamlit. Two serv
 - [ ] Containerize the FastAPI server with Docker.
 - [ ] Pick a hosting provider for a free demo of the car-damage API.
 - [ ] What's a health endpoint and who calls it?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **FastAPI** | Modern Python web framework with automatic typed validation and OpenAPI docs |
+| **Endpoint** | A URL + HTTP method handled by a function (e.g., `POST /predict`) |
+| **`@app.get` / `@app.post`** | Decorators that bind a function to an HTTP method + path |
+| **uvicorn** | ASGI server that actually runs your FastAPI app |
+| **`UploadFile`** | FastAPI helper for receiving uploaded files |
+| **Pydantic** | Library for typed data validation; FastAPI uses it for inputs/outputs |
+| **`BaseModel`** | Pydantic class for declaring a schema |
+| **`response_model`** | Tells FastAPI the expected output schema |
+| **OpenAPI / Swagger** | Auto-generated interactive docs at `/docs` |
+| **CORS** | "Cross-Origin Resource Sharing" — browser security; usually enabled via middleware |
+| **Middleware** | Code that wraps every request (CORS, logging, auth) |
+| **`async def` vs `def`** | Async for I/O-bound, sync for CPU-bound (e.g., model inference) |
+| **`BackgroundTasks`** | Run something *after* sending the response (logging, queueing) |
+| **Health endpoint** | `/health` returns OK; used by load balancers to check service is up |
+| **Readiness endpoint** | `/ready` returns true when model is fully loaded |
+| **Docker** | Container platform that packages app + dependencies |
+| **Dockerfile** | Recipe describing how to build the container image |
+| **Image / container** | Built artifact / running instance of that artifact |
+| **Render / Railway / Fly.io** | Cloud hosting providers with free tiers |
+| **HuggingFace Spaces** | Free hosting for ML demos (Gradio, Streamlit, FastAPI) |
+| **AWS Lambda** | Serverless compute; cold starts can be a problem for big models |
+| **Cloud Run / ECS** | Container-based pay-per-use compute |
+| **SageMaker / Vertex AI** | Managed model-serving platforms (enterprise) |
+| **Batch inference** | Sending many inputs in one call for throughput |
+| **Cold start** | Latency when a sleeping service spins up |
+| **Rate limiting** | Capping how many requests a client can make per second/minute |
+| **`HTTPException`** | FastAPI's clean way to return error responses |
+| **`response_model`** | Pydantic schema enforcing the response shape |
+| **Pinned `requirements.txt`** | Dependency versions locked so production matches dev |
+
+## Further reading
+- UI counterpart: [01-streamlit.md](01-streamlit.md)
+- Project that deploys this stack: [../06-projects/01-car-damage-detection.md](../06-projects/01-car-damage-detection.md)
+- FastAPI docs: https://fastapi.tiangolo.com

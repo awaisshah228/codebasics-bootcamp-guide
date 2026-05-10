@@ -7,6 +7,63 @@
 
 ---
 
+## In one sentence
+Text preprocessing is how you turn messy raw text — with random capitals, weird punctuation, URLs, and word variations — into a clean, consistent stream of tokens your model can handle.
+
+## Real-world analogy
+Imagine you're a librarian receiving boxes of donated books. Some are in ALL CAPS, some have coffee stains, some say "running" while others say "ran" or "runs." Before you can shelve them, you straighten them up: same case, same word forms, throw out the junk pages. That cleanup is preprocessing. The cleaner your shelf, the easier it is to find what you want later.
+
+## The intuition (plain English)
+Three main jobs happen here. First, **tokenize**: chop a string into small pieces (words, sub-words, or characters). Second, **normalize**: lowercase, strip URLs, collapse "running / runs / ran" into a single root so the model treats them as the same idea. Third, **filter**: drop ultra-common words like "the" and "is" if they're noise for your task. You don't always do all three — modern transformer models prefer raw text, while a search engine still wants aggressive cleaning.
+
+## Mini worked example — one tweet, four pipelines
+
+Tweet:
+```
+"I'm LOVING the new iPhone!! Visit https://apple.com for details. #excited"
+```
+
+| Step | Output |
+|------|--------|
+| Raw | `"I'm LOVING the new iPhone!! Visit https://apple.com for details. #excited"` |
+| Lowercase | `"i'm loving the new iphone!! visit https://apple.com for details. #excited"` |
+| Strip URLs | `"i'm loving the new iphone!! visit  for details. #excited"` |
+| Word tokens | `["i", "'m", "loving", "the", "new", "iphone", "!", "!", "visit", "for", "details", ".", "#", "excited"]` |
+| Drop stop words | `["loving", "new", "iphone", "!", "!", "visit", "details", ".", "#", "excited"]` |
+| Lemmatize | `["love", "new", "iphone", "!", "!", "visit", "detail", ".", "#", "excited"]` |
+| BERT sub-word tokens | `["i", "'", "m", "loving", "the", "new", "i", "##phone", "!", "!", ...]` |
+
+Notice that `"loving"` becomes `"love"` after lemmatization, but BERT just keeps it as `"loving"` — different models prefer different cleaning levels.
+
+## At-a-glance — pipeline you'll build
+
+```mermaid
+flowchart TB
+    Raw[Raw text] --> Strip[Strip URLs / HTML / emoji]
+    Strip --> Case{Lowercase?}
+    Case -- yes --> Lower[lower the case]
+    Case -- no --> Keep[keep case]
+    Lower --> Tok[Tokenize]
+    Keep --> Tok
+    Tok --> Stop{Drop stop words?}
+    Stop -- task wants --> Drop[remove the/a/is]
+    Stop -- sentiment / NER --> KeepStop[keep them]
+    Drop --> Form{Word form}
+    KeepStop --> Form
+    Form -- speed --> Stem[Stem: run/runs/ran -> run]
+    Form -- accuracy --> Lem[Lemmatize: better -> good]
+    Stem --> Out[Clean tokens ready for vectorizing]
+    Lem --> Out
+```
+
+## Why this matters
+- Bad preprocessing silently kills downstream accuracy. "Apple" lowercased to "apple" can wipe out company-name detection.
+- The right tokenizer gives smaller models 5-10 percentage points of accuracy for free.
+- For BERT/GPT-class models you preprocess **less** than you think — over-cleaning hurts.
+- Search engines and BoW classifiers depend on clean, normalized tokens.
+
+---
+
 ## 1. Tokenization — splitting text into units
 
 ### Word tokenization
@@ -247,3 +304,40 @@ BERT / GPT do their own subword tokenization. Heavy preprocessing (lowercase, re
 - [ ] How does subword tokenization handle "antiestablishmentarianism"?
 - [ ] When can I skip preprocessing entirely?
 - [ ] Build a `preprocess(text)` function that strips URLs, lowercases, lemmatizes.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Tokenization** | Chopping a string into small pieces (tokens) |
+| **Token** | One piece of text the model treats as a unit — a word, sub-word, or character |
+| **Word tokenizer** | Splits on whitespace + punctuation: `"hello, world"` -> `["hello", ",", "world"]` |
+| **Sentence tokenizer** | Splits a paragraph into sentences |
+| **Sub-word tokenizer** | Splits rare words into smaller known pieces: `"unbelievable"` -> `["un", "##bel", "##ievable"]` |
+| **BPE** (Byte-Pair Encoding) | Sub-word method used by GPT — merges frequent character pairs |
+| **WordPiece** | Sub-word method used by BERT — `##` marks "this is the rest of the previous word" |
+| **SentencePiece** | Sub-word method used by T5 and most multilingual models — language-agnostic |
+| **Out-of-vocabulary (OOV)** | A word the tokenizer has never seen — sub-words solve this |
+| **Stop words** | Common low-information words: the, a, is, of, to |
+| **Stemming** | Crude rule-based chopping: "running" -> "run", "easily" -> "easili" (not a real word) |
+| **Lemmatization** | Smart reduction to dictionary form: "ran" -> "run", "better" -> "good" |
+| **Lemma** | The dictionary form of a word |
+| **Porter / Snowball / Lancaster** | Three classic English stemmers, increasing in aggressiveness |
+| **Lowercase / casefold** | Converting all letters to lower case |
+| **Punctuation stripping** | Removing `.`, `,`, `!`, etc. — useful for BoW, hurtful for sentiment |
+| **Normalization** | Generic term for "make text consistent": case, accents, whitespace |
+| **Whitespace collapse** | Replacing multiple spaces / newlines with a single space |
+| **Regex** | Pattern language for matching text. See [03-pos-ner-regex.md](03-pos-ner-regex.md) |
+| **Vocabulary** | The set of unique tokens the model knows |
+| **Attention mask** | A 0/1 array telling the model which positions are real tokens vs padding |
+| **Padding** | Adding `[PAD]` tokens so all sequences in a batch have equal length |
+| **Truncation** | Cutting off tokens past `max_length` |
+| **Subword model coverage** | A property of BPE/WordPiece: any string can be encoded, no OOV |
+
+## Further reading
+- Next: [03-pos-ner-regex.md](03-pos-ner-regex.md) — pulling structure out of text
+- Then: [04-bow-ngrams-tfidf.md](04-bow-ngrams-tfidf.md) — first way to turn cleaned tokens into numbers
+- DL bridge: tokenizers in HuggingFace are covered in [BERT fine-tuning](../07-deep-learning/04-sequence/05-bert-huggingface.md)
+- Style guide: [BEGINNER-STYLE-GUIDE.md](../../BEGINNER-STYLE-GUIDE.md)

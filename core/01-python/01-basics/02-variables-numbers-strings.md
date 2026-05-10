@@ -5,6 +5,51 @@
 
 ---
 
+## In one sentence
+Variables are **names you stick onto values** so you can refer to them later, and Python's three basic value types — numbers, strings, and booleans — are the bricks every program is made of.
+
+## Real-world analogy
+A variable is like a sticky note on a jar. The jar holds a thing (the value); the sticky note holds the name. Two sticky notes can point to the same jar, and you can move a sticky note to a different jar at any time. The jar does not change just because you renamed it.
+
+## The intuition (plain English)
+You bind a name to a value with `=`. Python figures out the type automatically — you do not declare `int` or `string` like in Java. Once you have variables, three things matter: numbers (for math), strings (for text), and the rules for combining them. Strings cannot be modified in place — every "edit" creates a new string. Floats are not exact (`0.1 + 0.2` is not exactly `0.3`), which catches everyone once.
+
+## Mini worked example
+Build a small profile from scratch:
+
+```python
+name = "Peter"            # string — the name "Peter" tagged as `name`
+age = 28                  # int    — whole number
+height_m = 1.75           # float  — number with decimals
+is_student = True         # bool   — True or False
+
+bmi = 70 / (height_m ** 2)            # 22.86
+greeting = f"Hi {name}, age {age}"    # f-string mixes text + values
+print(greeting)                       # → Hi Peter, age 28
+print(f"BMI = {bmi:.1f}")             # → BMI = 22.9
+```
+
+Five names, four types, one formatted message. That is 80% of beginner Python.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    V[Value: 28] --> N1[name = age]
+    V --> N2[name = years_old]
+    N1 -.same value.- N2
+
+    S1[String 'hello'] -->|immutable| S2[New string 'Hello']
+    S1 -.original unchanged.- S1
+```
+
+## Why this matters
+- Every Python program manipulates variables — this is the alphabet of the language.
+- The float-precision gotcha shows up in money calculations and ML metrics — knowing it now saves real bugs later.
+- f-strings are the modern, readable way to format output and you will use them in every notebook and script.
+
+---
+
 ## 1. Variables
 
 ### What's actually happening
@@ -162,3 +207,39 @@ print(count)
 - [ ] Write an f-string that formats a float to 2 decimal places.
 - [ ] Why does `s[0] = "H"` raise an error?
 - [ ] Convert "abc,def,ghi" into a list of three strings.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Variable** | A name bound to a value — `age = 28` makes `age` point to `28` |
+| **Object** | The thing in memory that a variable points to |
+| **Type** | The category of a value (`int`, `float`, `str`, `bool`, etc.) |
+| **Dynamic typing** | Types are checked when code runs, not declared upfront |
+| **`int`** | A whole number — `42`, `-7`, `0` |
+| **`float`** | A number with decimals, stored in 64-bit IEEE 754 format |
+| **`complex`** | A number with a real and imaginary part — rare in data science |
+| **`str` (string)** | Text — `"hello"`, surrounded by quotes |
+| **`bool`** | `True` or `False` |
+| **Operator** | A symbol that does an operation: `+`, `-`, `*`, `/`, `**`, `%` |
+| **Floor division (`//`)** | Division that rounds down: `10 // 3 == 3` |
+| **Modulo (`%`)** | The remainder: `10 % 3 == 1` |
+| **Exponent (`**`)** | Power: `2 ** 10 == 1024` |
+| **Floating-point precision** | Floats cannot represent every decimal exactly — `0.1 + 0.2 != 0.3` |
+| **Indexing** | Getting one character: `s[0]` is the first |
+| **Slicing** | Getting a range: `s[0:4]` is characters 0, 1, 2, 3 |
+| **Immutable** | Cannot be modified after creation — strings, ints, tuples |
+| **f-string** | A formatted string literal: `f"Hi {name}"` — modern way to interpolate |
+| **`snake_case`** | Lowercase with underscores — Python's convention for variables and functions |
+| **Type hint** | Optional annotation: `x: int = 42` — does not change runtime, helps editors |
+| **`mypy`** | A static type checker that uses type hints to catch bugs |
+| **`==` vs `is`** | `==` compares values; `is` compares whether two names point to the same object |
+| **Concatenation** | Joining strings with `+`: `"a" + "b"` → `"ab"` |
+| **Method** | A function attached to an object: `s.upper()` |
+
+## Further reading
+- Next: [03-lists-conditions-loops.md](03-lists-conditions-loops.md)
+- Strings get more useful with [04-functions-dict-tuples-files.md](04-functions-dict-tuples-files.md)
+- Math/Stats foundation: [../../05-math-statistics/01-foundations/02-central-tendency-dispersion.md](../../05-math-statistics/01-foundations/02-central-tendency-dispersion.md)

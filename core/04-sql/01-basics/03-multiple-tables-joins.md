@@ -9,6 +9,88 @@
 
 ---
 
+## In one sentence
+A **JOIN** stitches two tables together on a shared column — like merging your contacts list with your call log on phone number — so you can ask questions that span both.
+
+## Real-world analogy
+You have a **customers** notebook (names + IDs) and an **orders** notebook (orders + customer ID). To answer "what did Alice buy?" you have to flip between both — matching her customer ID. A JOIN is SQL doing that flipping for you, automatically, by the linking column.
+
+## The intuition (plain English)
+Real data is split across many tables on purpose: it saves space and avoids contradictions. When a question crosses tables, you JOIN them on the column they share (a primary key on one side, a foreign key on the other). The four flavors — INNER, LEFT, RIGHT, FULL — differ only in *what to do with rows that have no match*. INNER drops them; LEFT keeps everyone on the left; RIGHT keeps everyone on the right; FULL keeps everyone. Picking the wrong flavor silently changes your answer, so the choice is the whole game.
+
+## Mini worked example — joining customers and orders
+
+Two tiny tables:
+
+```
+customers                       orders
+id | name                       id | customer_id | amount
+---+-------                     ---+-------------+-------
+ 1 | Alice                       101 |          1 |    50
+ 2 | Bob                         102 |          1 |    20
+ 3 | Cleo                        103 |          2 |   100
+                                 104 |          4 |    35   <- orphan, no matching customer
+```
+
+INNER JOIN — only matched rows on both sides:
+
+```sql
+SELECT c.name, o.amount
+FROM customers c
+INNER JOIN orders o ON c.id = o.customer_id;
+```
+
+Result (Cleo and the orphan are both dropped):
+
+```
+name  | amount
+------+-------
+Alice |     50
+Alice |     20
+Bob   |    100
+```
+
+LEFT JOIN — keep every customer; orders are NULL if missing:
+
+```sql
+SELECT c.name, o.amount
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id;
+```
+
+Result:
+
+```
+name  | amount
+------+-------
+Alice |     50
+Alice |     20
+Bob   |    100
+Cleo  |  NULL    <- Cleo had no orders, but we keep her
+```
+
+Same data, different question. That's why join choice matters.
+
+## At-a-glance — pick the right join
+
+```mermaid
+flowchart TB
+    Q[Which rows do I want to keep?] --> Both{Need rows<br/>without matches?}
+    Both -- "no, only matches" --> I[INNER JOIN]
+    Both -- "all rows from left side" --> L[LEFT JOIN]
+    Both -- "all rows from right side" --> R[RIGHT JOIN<br/>rare — flip and use LEFT]
+    Both -- "all rows from both sides" --> F[FULL OUTER JOIN<br/>MySQL: emulate with UNION]
+    Q --> Cross{Need every<br/>combination?}
+    Cross -- yes --> C[CROSS JOIN<br/>Cartesian product]
+```
+
+## Why this matters
+- 80% of analyst SQL is multi-table — a single-table query rarely answers a real business question.
+- The classic A/B test data shape (users, events, conversions) is three tables — JOIN is the only way to compute conversion rate per cohort.
+- The pandas equivalent is `df.merge(...)` with `how='inner'/'left'/'right'/'outer'` — same four flavors, same trade-offs. See [../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md](../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md).
+
+---
+
 ## 1. Why multiple tables — quick refresher on normalization
 
 If you store a movie *and* its actors in one wide table, every movie repeats actor info. Updates become messy, storage inflates, integrity slips.
@@ -251,3 +333,38 @@ The trick: alias the table twice so the engine treats it as two tables.
 - [ ] Why is `LEFT JOIN ... WHERE b.col = X` often a bug?
 - [ ] Difference between `ON` and `USING` in a JOIN clause?
 - [ ] What's a self join and when is it useful?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **JOIN** | Combine two tables side by side using a shared column |
+| **ON** | The matching rule for a JOIN: `ON a.id = b.customer_id` |
+| **USING** | Shorthand `ON` when both tables use the same column name: `USING (movie_id)` |
+| **INNER JOIN** | Keep only rows that match in both tables. Default when you write just `JOIN` |
+| **LEFT JOIN** | Keep every row from the left table; NULL where the right side has no match |
+| **RIGHT JOIN** | Mirror of LEFT — most teams flip and use LEFT for readability |
+| **FULL OUTER JOIN** | Keep all rows from both sides. MySQL emulates with `LEFT JOIN UNION RIGHT JOIN` |
+| **CROSS JOIN** | Every combination of rows from two tables. Output rows = rows(A) x rows(B) |
+| **Self join** | A table joined to itself — needed for hierarchies (employee -> manager) |
+| **NATURAL JOIN** | Auto-joins on every same-named column. Risky — avoid in production |
+| **Primary key (PK)** | The column that uniquely identifies each row in a table |
+| **Foreign key (FK)** | A column that points to another table's primary key |
+| **Junction table** | A small table that resolves a many-to-many relationship (e.g., `movie_actor`) |
+| **Many-to-many (N:M)** | Each side links to many on the other (movies have many actors; actors are in many movies) |
+| **One-to-many (1:N)** | One row on one side links to many on the other (one customer, many orders) |
+| **One-to-one (1:1)** | Exactly one matching row on each side (movie -> financials) |
+| **Cardinality of a join** | How many rows come out per input row. Joining a 1:N table inflates row counts |
+| **Cartesian product** | All combinations — what you get when you forget the `ON` clause |
+| **Alias** | A short name for a table inside a query: `FROM movies m` |
+| **Ambiguous column** | "column X exists in both tables" error — fix by qualifying: `m.id`, `f.id` |
+| **Orphan row** | A row whose foreign key points to nothing. INNER JOIN drops it; LEFT JOIN exposes it |
+| **Audit pattern (LEFT JOIN + IS NULL)** | Find rows with no match: `LEFT JOIN ... WHERE other.pk IS NULL` |
+
+## Further reading
+- Next: [04-final-quiz.md](04-final-quiz.md) — drill on basics
+- Then: [../02-advanced/01-subqueries-cte.md](../02-advanced/01-subqueries-cte.md) — same logic, more layers
+- Pandas equivalent: [../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md](../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md) — `df.merge(...)` is JOIN
+- ML feature engineering: [../../06-machine-learning/01-foundations/05-preprocessing-encoding.md](../../06-machine-learning/01-foundations/05-preprocessing-encoding.md) — most ML training data is built by joining several source tables

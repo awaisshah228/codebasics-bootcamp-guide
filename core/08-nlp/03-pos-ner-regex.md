@@ -7,6 +7,70 @@
 
 ---
 
+## In one sentence
+This chapter is about pulling **structure** out of free text — labelling each word's grammatical role (POS), spotting people / companies / dates (NER), and matching exact patterns like emails and phone numbers (regex).
+
+## Real-world analogy
+Think of POS tagging as putting a coloured sticker on every word in a sentence — green for nouns, red for verbs, blue for adjectives. NER is the highlighter pen you grab to circle "Apple", "Tim Cook", "California". Regex is a stencil cut to the exact shape of "an email address" — slide it over the page and only emails fall through.
+
+## The intuition (plain English)
+A sentence is more than a bag of words; it has roles. POS tagging tells you which word is doing the action and which is being acted on. NER goes further: it labels chunks of text as real-world things (people, places, money). Regex is the brittle-but-perfect tool for things that follow rigid formats (emails always have an `@`, dates always have digits). Modern projects mix all three: NER for fuzzy concepts, regex for rigid patterns, POS as the glue.
+
+## Mini worked example — one news sentence, three lenses
+
+Input:
+```
+"Tim Cook said Apple bought Beats for $3 billion on May 28, 2014, in California."
+```
+
+POS tags (one sticker per word):
+```
+Tim/PROPN  Cook/PROPN  said/VERB  Apple/PROPN  bought/VERB  Beats/PROPN
+for/ADP  $/SYM  3/NUM  billion/NUM  on/ADP  May/PROPN  28/NUM  ,/PUNCT  2014/NUM
+,/PUNCT  in/ADP  California/PROPN  ./PUNCT
+```
+
+NER (highlighter):
+```
+PERSON   = "Tim Cook"
+ORG      = "Apple", "Beats"
+MONEY    = "$3 billion"
+DATE     = "May 28, 2014"
+GPE      = "California"
+```
+
+Regex (stencils for fixed shapes — different sentence to show emails / phones):
+```
+text = "Email tim@apple.com or call +1-408-555-0100 by 2014-05-28."
+
+emails = re.findall(r"[\w\.-]+@[\w\.-]+", text)   -> ["tim@apple.com"]
+phones = re.findall(r"\+?\d[\d\-\s]{8,}\d", text) -> ["+1-408-555-0100"]
+dates  = re.findall(r"\d{4}-\d{2}-\d{2}", text)   -> ["2014-05-28"]
+```
+
+Same paragraph, three different ways of pulling structure out of it.
+
+## At-a-glance — pick the right lens
+
+```mermaid
+flowchart LR
+    Input[Free text] --> Q{What are you extracting?}
+    Q -- "grammatical roles" --> POS[POS tagging<br/>noun / verb / adj]
+    Q -- "fuzzy entities: people,<br/>orgs, places, dates" --> NER[Named Entity Recognition]
+    Q -- "rigid patterns:<br/>emails, phones, IDs" --> RX[Regex]
+    POS --> Use[Use case: lemmatization, parsing, feature engineering]
+    NER --> Use2[Use case: resume parser, news tagging, chatbots]
+    RX --> Use3[Use case: cleaning, redaction, validation]
+```
+
+## Why this matters
+- Resume parsers, support-ticket classifiers, and news taggers all live or die by good entity extraction.
+- POS is the silent helper behind lemmatization, dependency parsing, and many feature-engineering tricks.
+- Regex stays in your toolbox forever — it's the cheapest, most reliable way to catch fixed formats.
+- Knowing when to use NER vs regex saves hours of debugging brittle pipelines.
+
+---
+
 ## 1. Part-of-speech (POS) tagging
 
 For each token, predict its **grammatical role** — noun, verb, adjective, etc.
@@ -231,3 +295,45 @@ This is exactly the pattern for **resume parsers** (Codebasics' ATS Resume build
 - [ ] Why preserve case for NER?
 - [ ] How do you train a custom NER label in spaCy?
 - [ ] When is regex the wrong tool?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **POS** (Part of Speech) | The grammatical role of a word: noun, verb, adjective, adverb, etc. |
+| **POS tag** | The label attached to a token: NOUN, VERB, ADJ, ADV, PROPN, etc. |
+| **Universal POS tagset** | A 17-tag scheme used across languages (NOUN, VERB, ADJ, ...) |
+| **Penn Treebank tag** | The fine-grained English-only tagset (NN, NNS, VBZ, JJ, ...) |
+| **PROPN** (Proper Noun) | A name: "Apple", "Lahore", "Tim" |
+| **NOUN** | A common noun: "car", "city", "manager" |
+| **VERB / AUX** | An action / a helper verb ("is", "have", "will") |
+| **DET** (Determiner) | "the", "a", "this", "some" |
+| **ADP** (Adposition) | Preposition or postposition: "in", "on", "of" |
+| **CONJ / CCONJ / SCONJ** | Conjunctions: "and", "but", "because" |
+| **Dependency parsing** | Building a tree of how words depend on each other grammatically |
+| **Head / dependent** | In a dependency tree, the parent word vs the child word |
+| **NER** (Named Entity Recognition) | Finding spans of text that refer to real-world things |
+| **Entity** | A span like "Tim Cook" or "$3 billion" with a label |
+| **PERSON / ORG / GPE / LOC / DATE / MONEY** | Common entity labels (people, organizations, geo-political entity, location, date, money) |
+| **GPE** (Geo-Political Entity) | Countries, cities, states — political places |
+| **NORP** | Nationalities, religions, political groups |
+| **B- / I- / O tags** | Token-level scheme: B-eginning of entity, I-nside, O-utside |
+| **Token classification** | The HuggingFace task type used to train modern NER models |
+| **Custom NER** | Training a model to recognize your own labels (e.g., DRUG, PRODUCT_CODE) |
+| **Regex** (Regular Expression) | A pattern language for matching text |
+| **Pattern** | The regex string itself, e.g., `r"\d{4}-\d{2}-\d{2}"` |
+| **Anchor** | A regex piece that ties to a position: `^` start, `$` end, `\b` word boundary |
+| **Greedy / lazy** | Whether regex matches as much (`+`) or as little (`+?`) as possible |
+| **Capture group** | Parentheses `( )` that pull out a sub-match |
+| **Flags** | Modifiers like `re.IGNORECASE`, `re.MULTILINE`, `re.DOTALL` |
+| **Compile** | Pre-build a regex once for fast reuse with `re.compile(pattern)` |
+| **`re.escape`** | Escape user input so special characters lose their regex meaning |
+| **displaCy** | spaCy's built-in HTML visualizer for POS trees and entities |
+
+## Further reading
+- Next: [04-bow-ngrams-tfidf.md](04-bow-ngrams-tfidf.md) — turn extracted tokens into features
+- Then: [06-news-classification-spacy.md](06-news-classification-spacy.md) — combine NER and classification on real news
+- DL bridge: modern NER often uses [transformers](../07-deep-learning/04-sequence/03-transformer-architecture.md) and [BERT](../07-deep-learning/04-sequence/05-bert-huggingface.md)
+- Style guide: [BEGINNER-STYLE-GUIDE.md](../../BEGINNER-STYLE-GUIDE.md)

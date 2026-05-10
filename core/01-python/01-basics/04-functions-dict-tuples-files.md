@@ -5,6 +5,62 @@
 
 ---
 
+## In one sentence
+**Functions** package reusable logic, **dictionaries** store labeled data, **tuples** are fixed mini-records, and **file handling** lets your code read and write to disk — together they turn Python from calculator into program.
+
+## Real-world analogy
+A function is a coffee machine: you put inputs in (water + beans) and get an output (coffee). A dictionary is a phone book: look up a name and find a number. A tuple is a fixed luggage tag — once you write it, you do not edit it. File handling is opening and closing a notebook to read or jot something down.
+
+## The intuition (plain English)
+You define a function with `def name(args):` and call it with `name(values)`. Functions can have **default arguments** so callers do not have to fill in everything. Dictionaries map **keys to values** — `person["name"]` returns the name. Tuples look like lists with parentheses but they are **immutable**, which makes them safe as dict keys and great for "this row of data won't change." Files are opened with `with open(...) as f:` so they always close even on errors.
+
+## Mini worked example
+A tiny "save user to file" pipeline:
+
+```python
+def make_user(name, age, role="learner"):           # default arg
+    return {"name": name, "age": age, "role": role}
+
+user = make_user("Awais", 28)                       # uses default role
+print(user)                                          # {'name': 'Awais', 'age': 28, 'role': 'learner'}
+
+# write user to file as one line of JSON-ish text
+with open("user.txt", "w") as f:
+    f.write(f"{user['name']},{user['age']},{user['role']}\n")
+
+# read it back
+with open("user.txt") as f:
+    line = f.read().strip()
+    name, age, role = line.split(",")               # tuple-style unpacking
+    print(name, age, role)                          # Awais 28 learner
+```
+
+A function builds a dict, a `with` block writes a file, unpacking restores the values.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    Args[args + kwargs] --> F[function body]
+    F --> Ret[return value]
+
+    K1[key 'name'] --> D[dict]
+    K2[key 'age'] --> D
+    D --> V1[value 'Awais']
+    D --> V2[value 28]
+
+    File[disk file] -- open --> Buf[file object]
+    Buf -- read/write --> Code[your code]
+    Buf -- with-block ends --> Closed[auto-closed]
+```
+
+## Why this matters
+- Every Python program is a graph of functions — naming work makes it reusable and testable.
+- Dictionaries are the backbone of JSON, API responses, and pandas internals.
+- Knowing `with open(...)` saves you from leaking file handles, the most common file bug.
+
+---
+
 ## 1. Functions
 
 ### Definition + return
@@ -302,3 +358,44 @@ Refusing to move on until "fully understanding" something. Symptom: stuck on lec
 - [ ] What does `with open(...) as f:` do that `f = open(...)` doesn't?
 - [ ] Write a function that returns the most common word in a string. (use `collections.Counter`)
 - [ ] How do I install `pandas` version 2.2 specifically?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Function** | A named, reusable block of code: `def name(args): ...` |
+| **Argument / parameter** | The values you pass into a function |
+| **Default argument** | A fallback value used when the caller skips that parameter |
+| **Keyword argument** | Passing by name: `make_user(name="Awais")` |
+| **`*args`** | Captures any number of positional args into a tuple |
+| **`**kwargs`** | Captures any number of keyword args into a dict |
+| **Type hint** | Annotation that tells editors and type-checkers what types to expect |
+| **Local scope** | Variables created inside a function, invisible outside |
+| **Global scope** | Variables at module level, visible everywhere |
+| **First-class function** | Functions can be passed around like values |
+| **`lambda`** | An inline anonymous function: `lambda x: x*2` |
+| **Dictionary (`dict`)** | A mapping of keys to values: `{"name": "Awais"}` |
+| **Key** | The lookup label in a dict |
+| **`.get(key, default)`** | Safe lookup that returns a default instead of `KeyError` |
+| **Hashable** | A value that can be a dict key — `int`, `str`, `tuple`, `frozenset` |
+| **`Counter`** | A subclass of dict from `collections` that counts occurrences |
+| **`defaultdict`** | A dict that auto-creates a default value for missing keys |
+| **Tuple** | An immutable ordered sequence: `(3, 4)` |
+| **Tuple unpacking** | Splitting a tuple into named variables: `x, y = point` |
+| **`namedtuple`** | A tuple where fields have names — `Point.x` instead of `Point[0]` |
+| **`dataclass`** | The modern way to make small struct-like classes (next chapter) |
+| **Module** | A `.py` file you can `import` |
+| **`pip`** | The Python package installer |
+| **`requirements.txt`** | A pinned list of packages for a project |
+| **File mode** | `"r"` read, `"w"` write/overwrite, `"a"` append |
+| **`with` block (context manager)** | Guarantees cleanup (file closed) even on exceptions |
+| **CSV** | Comma-Separated Values — a plain-text tabular format |
+| **`pathlib.Path`** | The modern object-oriented way to handle file paths |
+
+## Further reading
+- Next: [05-classes-exceptions.md](05-classes-exceptions.md)
+- Dictionary patterns power [07-eda-pandas-matplotlib-seaborn.md](07-eda-pandas-matplotlib-seaborn.md)
+- Comprehensions reshape data faster: [../03-advanced/01-comprehensions-sets.md](../03-advanced/01-comprehensions-sets.md)
+- File-based JSON: [../03-advanced/02-json-generators-decorators.md](../03-advanced/02-json-generators-decorators.md)

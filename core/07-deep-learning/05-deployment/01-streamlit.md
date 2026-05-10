@@ -5,6 +5,71 @@
 
 ---
 
+## In one sentence
+**Streamlit** lets you wrap a trained model in a clickable web app using *only Python* — no HTML, no JavaScript — and host it for free in about 5 minutes.
+
+## Real-world analogy
+You've cooked a great meal (trained your model). Streamlit is the takeout container with a label and a fork — recruiters or non-technical stakeholders can taste your work without asking "how do I run a Jupyter notebook?".
+
+## The intuition (plain English)
+- A Streamlit app is just a Python script that runs **top-to-bottom on every interaction**.
+- Heavy resources (models, DB connections) get cached with `@st.cache_resource` so they don't reload on every click.
+- Persistent state across reruns lives in `st.session_state`.
+- Pushing to GitHub + connecting Streamlit Cloud gives you a public URL in minutes — perfect for portfolio links.
+
+## Mini worked example — image classifier in 12 lines
+
+```python
+import streamlit as st
+from PIL import Image
+import torch.nn.functional as F
+
+@st.cache_resource
+def load_model():
+    return torch.load("model.pt", map_location="cpu").eval()
+
+st.title("Car Damage Detector")
+
+file = st.file_uploader("Upload a photo", type=["jpg", "png"])
+if file:
+    img = Image.open(file).convert("RGB")
+    st.image(img)
+    x = preprocess(img).unsqueeze(0)
+    probs = F.softmax(load_model()(x), dim=-1)[0]
+    st.success(f"Prediction: {CLASSES[probs.argmax()]} ({probs.max():.0%})")
+```
+
+That single file is what gets deployed. No backend, no frontend framework, no DevOps.
+
+## At-a-glance — Streamlit vs FastAPI
+
+```mermaid
+flowchart TB
+    Q[What do you need?] --> S{Use case}
+    S -- "Demo / portfolio / internal tool" --> ST[Streamlit alone<br/>fastest path]
+    S -- "Programmatic API for other apps" --> FA[FastAPI alone]
+    S -- "Demo + production-grade backend" --> BOTH[Streamlit UI calls FastAPI<br/>two services, decoupled]
+    S -- "Heavy concurrent users" --> FA2[FastAPI + frontend framework<br/>Streamlit struggles at scale]
+```
+
+```
+   Streamlit reruns the script top-to-bottom on every interaction:
+   ┌──────────────────────────────────────────────────────────────┐
+   │  1. import + define functions                               │
+   │  2. @st.cache_resource → load model ONCE                    │
+   │  3. st.title / st.file_uploader / st.button → render UI     │
+   │  4. on user click → script reruns from the top              │
+   │  5. cache hits skip the heavy load                          │
+   └──────────────────────────────────────────────────────────────┘
+```
+
+## Why this matters
+- A live demo URL on a resume is worth more than 10 GitHub repos for many recruiters.
+- Streamlit Cloud is free for public apps — you can ship today.
+- Knowing when Streamlit *isn't* enough (high traffic, multi-user state) pushes you to the FastAPI pattern in the next file.
+
+---
+
 ## Why Streamlit for DL demos
 
 A Streamlit app is the **fastest way** to put a model behind a UI. No HTML, no JS, no React. Just Python.
@@ -241,3 +306,36 @@ For real production, **Streamlit is best for internal tools / demos, not custome
 - [ ] Build a multi-page app — show me the folder structure.
 - [ ] When prefer FastAPI over Streamlit for serving a model?
 - [ ] Walk through a Streamlit demo for an image classifier.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Streamlit** | Python framework for building data/ML web apps |
+| **`streamlit run app.py`** | Command that launches the app at localhost:8501 |
+| **Top-to-bottom rerun** | Streamlit re-executes the whole script on every interaction |
+| **`@st.cache_resource`** | Cache for heavy persistent objects (models, DB connections) |
+| **`@st.cache_data`** | Cache for cheap pure functions (DataFrames, computations) |
+| **`st.session_state`** | Dict-like object that persists across reruns within a session |
+| **`st.file_uploader`** | Widget for uploading files; returns a file-like object |
+| **`st.image / video / audio`** | Display image/video/audio assets |
+| **`st.metric`** | Big-number widget with optional delta arrow |
+| **`st.progress`** | Progress bar (0–1) |
+| **`st.expander`** | Collapsible region |
+| **`st.sidebar`** | Left-hand panel for global controls |
+| **`st.columns`** | Grid layout helper |
+| **Multi-page app** | Folder named `pages/` auto-creates sidebar nav |
+| **`st.secrets`** | Secure key-value store (`.streamlit/secrets.toml`) for API keys |
+| **Streamlit Cloud** | Free hosting — connect a GitHub repo and deploy in minutes |
+| **`requirements.txt`** | Pinned Python dependencies your hosted app needs |
+| **Git LFS** | Git Large File Storage — for big model files |
+| **HuggingFace Hub** | Place to host model weights externally so your repo stays small |
+| **Cold start** | First-load delay when an idle service spins up |
+| **Decoupled architecture** | UI and model API are separate services that talk over HTTP |
+
+## Further reading
+- Backend pair: [02-fastapi.md](02-fastapi.md) — when Streamlit alone isn't enough
+- Project that deploys both: [../06-projects/01-car-damage-detection.md](../06-projects/01-car-damage-detection.md)
+- Streamlit docs: https://docs.streamlit.io

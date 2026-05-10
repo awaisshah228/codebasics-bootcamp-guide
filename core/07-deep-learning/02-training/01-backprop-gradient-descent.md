@@ -7,6 +7,62 @@
 
 ---
 
+## In one sentence
+**Gradient descent** is how a network *learns*: it nudges every weight a tiny step in the direction that makes its predictions less wrong, and **backpropagation** is the chain-rule trick that figures out which direction "less wrong" is for each weight.
+
+## Real-world analogy
+You're blindfolded on a hill and want the bottom. You feel which way slopes down most under your feet, take a small step, and feel again. That's gradient descent. Backprop is the messenger system that tells every "knob" in the network *"this is the slope you contribute to the overall hill — adjust accordingly."*
+
+## The intuition (plain English)
+- Every weight in the network has a tiny effect on the final loss; the **gradient** measures that effect.
+- **Backpropagation** uses the chain rule to compute every gradient in one efficient backward sweep, instead of nudging weights one at a time and re-running the forward pass.
+- **Gradient descent** then takes the gradients and updates the weights: `new = old − learning_rate × gradient`.
+- You repeat this for every batch in your dataset, for many epochs, until the loss flattens.
+
+## Mini worked example — one gradient-descent step
+
+A weight `w = 0.50` contributes to a loss `L = 8.0`. Backprop tells you `∂L/∂w = +4.0` (positive: increasing `w` worsens the loss).
+
+```
+Learning rate η = 0.1
+
+Update rule:  w_new = w_old − η · ∂L/∂w
+              w_new = 0.50  − 0.1 · 4.0
+              w_new = 0.50  − 0.40
+              w_new = 0.10
+
+Next forward pass uses w = 0.10, loss drops from 8.0 → 5.2 (say).
+Repeat for every weight, every batch.
+```
+
+That tiny rule, applied a million times across millions of weights, is *all* a neural net does to learn.
+
+## At-a-glance — one training step
+
+```mermaid
+flowchart LR
+    X[Batch x, y] --> F[Forward: ŷ = model x]
+    F --> L[Loss = how wrong]
+    L --> B[Backward: compute every dL/dw via chain rule]
+    B --> Z[zero_grad: clear old gradients]
+    Z --> S[step: w = w - lr*dL/dw]
+    S --> X
+```
+
+```
+batch ─► forward ─► loss ─► backward (autograd) ─► step ─► next batch
+                              ▲
+                  chain rule walks RIGHT to LEFT
+                  through every layer's local derivative
+```
+
+## Why this matters
+- **Every** modern AI model — GPT, Stable Diffusion, AlphaFold — was trained with gradient descent + backprop. No exceptions.
+- The choice of **batch size** and **learning rate** decides whether your training converges, diverges, or stalls.
+- Reading a loss curve correctly distinguishes "almost done" from "wasting GPU hours."
+
+---
+
 ## 1. The big picture
 
 Training a neural net is **iterative optimization**:
@@ -191,3 +247,46 @@ What to look for:
 - [ ] What's early stopping and how do you implement it?
 - [ ] What does the loss curve look like for a healthy training run?
 - [ ] How does batch size interact with learning rate?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Gradient** | A vector of partial derivatives — points uphill on the loss surface |
+| **Gradient descent (GD)** | Algorithm that walks downhill on the loss by stepping opposite to the gradient |
+| **Loss / cost function** | Number measuring how wrong the model's predictions are |
+| **Cross-entropy loss** | Default classification loss; pairs with softmax output |
+| **MSE (Mean Squared Error)** | Default regression loss |
+| **Learning rate (η, lr)** | Step size in the update rule; biggest hyperparameter |
+| **Parameter / weight** | A learned number inside the network |
+| **Backpropagation (backprop)** | Efficient chain-rule algorithm to compute every gradient in one backward pass |
+| **Chain rule** | Calculus rule for differentiating nested functions: `(f(g(x)))' = f'(g) · g'(x)` |
+| **Forward pass** | Running input through the model to get predictions |
+| **Backward pass** | Walking backward through the computation graph to compute gradients |
+| **Update rule** | `θ ← θ − η · ∇θL` |
+| **Batch gradient descent** | Use the entire training set per update (slow, smooth) |
+| **SGD (Stochastic GD)** | Update on one sample at a time (fast, noisy) |
+| **Mini-batch GD** | Update on a small batch (32–512). The modern default. |
+| **Batch size** | How many samples per update |
+| **Epoch** | One full pass through the training set |
+| **Iteration / step** | One weight update = one mini-batch forward + backward + step |
+| **Convergence** | Loss has stopped decreasing meaningfully |
+| **Diverge** | Loss explodes (often to NaN); usually means LR too high |
+| **Overfitting** | Train loss keeps falling but validation loss rises |
+| **Underfitting** | Both train and validation loss are high; model not powerful enough |
+| **Early stopping** | Stop training when validation loss stops improving |
+| **Patience** | How many bad-epochs you tolerate before early-stopping |
+| **Validation set** | Held-out data used to monitor generalization during training |
+| **`optimizer.zero_grad()`** | Resets stale gradients before each step |
+| **`loss.backward()`** | Triggers autograd to compute all gradients |
+| **`optimizer.step()`** | Applies the gradient update to parameters |
+| **Gradient clipping** | Capping gradient magnitude to avoid explosions (used in RNNs) |
+| **Local minimum** | A dip in the loss surface that isn't the global lowest point |
+| **Saddle point** | A flat-ish region neither minimum nor maximum; common in high-D loss surfaces |
+
+## Further reading
+- Next: [02-mnist-digits.md](02-mnist-digits.md) — apply gradient descent on real digits
+- Optimizer upgrades: [03-optimizers-momentum-adam.md](03-optimizers-momentum-adam.md)
+- Math reference (BPTT for RNNs): [../architectures-and-math.md](../architectures-and-math.md)

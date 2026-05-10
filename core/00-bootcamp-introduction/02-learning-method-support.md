@@ -9,6 +9,29 @@
 
 ---
 
+## In one sentence
+The bootcamp gives you **content + doubt-clearance + job-assistance**, but only the second one is "free" — the first needs you to show up daily, the third needs you to actually apply.
+
+## When you're stuck — the help-seeking loop
+
+```mermaid
+flowchart TB
+    Stuck[Stuck on something] --> A[1 - Re-watch the relevant 3 minutes]
+    A --> B{Resolved?}
+    B -- yes --> Done[Done — note what you learned]
+    B -- no --> C[2 - Read official docs<br/>Python · sklearn · PyTorch]
+    C --> D{Resolved?}
+    D -- yes --> Done
+    D -- no --> E[3 - Search Discord — someone may have asked it]
+    E --> F{Found?}
+    F -- yes --> Done
+    F -- no --> G[4 - Post in Discord with:<br/>what you tried + exact error + code]
+```
+
+Following this order saves time and respects everyone else's time. Skipping straight to step 4 floods Discord and slows you down.
+
+---
+
 ## 1. Job assistance — what's actually included
 
 | Tool / Service | What it does | When to use |
@@ -118,3 +141,30 @@
 - [ ] Where do I post a doubt at 11pm and expect an answer by morning?
 - [ ] What's the difference between Discord support and the Smart Job Portal?
 - [ ] Do I have all required software installed?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Doubt clearance** | Indian-English for "answering your questions" — the support function |
+| **Discord** | A chat platform; Codebasics organizes mentorship there by module channel |
+| **Practice Room** | An interactive coding sandbox built into the Codebasics platform |
+| **Practice Arena** | Bigger challenge sets — the "gym" version of practice rooms |
+| **Smart Job Portal** | The dashboard where the Talent team reviews your resume + tracks applications |
+| **ATS Resume Builder** | Tool that writes a resume optimized for Applicant Tracking Systems |
+| **Live Webinar** | Monthly recorded sessions on real production AI/DS systems — RAG, agents, eval |
+| **System Requirements** | Bare-minimum hardware/software you need to run the bootcamp's tools |
+| **Anaconda** | A Python distribution that ships pre-installed with most data libraries |
+| **uv / venv** | Modern lightweight virtual-environment tools — alternative to Anaconda |
+| **MySQL Workbench** | Free GUI for running SQL against MySQL databases |
+| **DBeaver** | Free GUI alternative to MySQL Workbench, supports many databases |
+| **Hugging Face** | The "GitHub for ML models" — open-source models, datasets, demos |
+| **Kaggle** | Data-science competition + free GPU + dataset hub site |
+| **Google Colab** | Free Jupyter notebooks in the browser with optional GPU/TPU |
+| **AWS Free Tier** | Amazon's free quota for cloud services — used in the AgentCore project later |
+
+## Further reading
+- Next: [03-time-projects-soft-skills.md](03-time-projects-soft-skills.md)
+- Setup specifics: [../01-python/01-basics/01-installation.md](../01-python/01-basics/01-installation.md)

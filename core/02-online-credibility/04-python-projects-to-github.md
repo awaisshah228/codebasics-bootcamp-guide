@@ -6,6 +6,25 @@
 
 ---
 
+## In one sentence
+**LinkedIn says you can do it; GitHub proves it** — for data/AI roles, a pinned, well-documented GitHub project showing real code is worth more than 10 LinkedIn posts.
+
+## From local code → public proof — at-a-glance
+
+```mermaid
+flowchart LR
+    Code[Local project<br/>folder on your laptop] --> Clean[Clean<br/>.gitignore<br/>no secrets<br/>no large data]
+    Clean --> README[Write README<br/>problem · approach · results · how-to-run<br/>+ screenshot]
+    README --> Push[git init · add · commit · push]
+    Push --> Pin[Pin to your profile<br/>max 6 repos]
+    Pin --> Post[LinkedIn post<br/>announcing the project]
+    Post --> Visibility[Recruiters can find + read<br/>your actual code in 90 seconds]
+```
+
+Without the README and pin, the work exists but is invisible.
+
+---
+
 ## Why GitHub for projects (not just LinkedIn)
 
 LinkedIn says "I claim I can do this." GitHub *proves* it.
@@ -226,3 +245,38 @@ Use **3–5** relevant tags. Too many looks spammy. Useful ones:
 - [ ] Posted on LinkedIn for at least one project
 - [ ] No `.env` or large CSV in git history
 - [ ] Star count on my repo > 0 (ask peers in Discord to star)
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Repo (repository)** | A project folder tracked by Git, hosted on GitHub |
+| **Public repo** | Anyone on the internet can view (recruiters can read) |
+| **Private repo** | Only you (or invited collaborators) can view |
+| **README.md** | The front-page document GitHub renders at the top of a repo |
+| **Profile README** | A special repo named after your username — shows on your profile homepage |
+| **Pinned repos** | Up to 6 repos featured at the top of your profile |
+| **`.gitignore`** | A file listing patterns Git should NOT track (secrets, large data, caches) |
+| **`requirements.txt`** | List of Python packages your project needs — `pip install -r` reads it |
+| **`git init`** | One-time command to start tracking a folder with Git |
+| **`git add`** | Stage changes for the next commit |
+| **`git commit`** | Save staged changes with a message |
+| **`git push`** | Upload commits to the remote (GitHub) |
+| **`git remote add origin`** | Connect your local repo to a GitHub URL |
+| **Commit message** | The note attached to each commit — recruiters read these |
+| **Branch** | A parallel workspace inside the repo (default is `main`) |
+| **`main` / `master`** | The default branch name (newer repos use `main`) |
+| **License** | Legal terms for reuse — MIT or Apache 2.0 are common defaults |
+| **Topics** | GitHub tags on a repo (`data-analysis`, `python`) — boost discoverability |
+| **Star** | A bookmark on someone else's repo — also a credibility signal on yours |
+| **Demo GIF / screenshot** | Visual proof of what your project does, embedded in the README |
+| **Loom** | Tool for recording quick screen-share demos to embed in a README |
+| **`.env`** | A file holding secrets — must be gitignored |
+| **`__pycache__`** | Auto-generated Python folder — always gitignore |
+
+## Further reading
+- Next: [05-checkpoint.md](05-checkpoint.md)
+- Git fundamentals deep dive: [../03-build-in-public/02-git-fundamentals.md](../03-build-in-public/02-git-fundamentals.md)
+- README anatomy: [../03-build-in-public/04-github-anatomy.md](../03-build-in-public/04-github-anatomy.md)

@@ -1,5 +1,28 @@
 # Session 1 — What is Build In Public?
 
+## In one sentence
+**Build In Public** = posting one tiny weekly artifact of your work (chart, code, fix, lesson) — and the math says **26 such posts beat 200 cold applications** for a junior data role.
+
+## At-a-glance — the five forces
+
+```mermaid
+flowchart TB
+    Post[1 weekly post] --> A[Accountability:<br/>200 followers know you started]
+    Post --> S[Synthesis:<br/>writing forces compression<br/>= deeper learning]
+    Post --> F[Feedback:<br/>strangers correct your bugs]
+    Post --> C[Credibility:<br/>26 weekly posts = recruiter-readable trail]
+    Post --> N[Network:<br/>people doing same thing find you]
+    A --> Outcome[Inbound DMs from recruiters<br/>+ referrals + offers]
+    S --> Outcome
+    F --> Outcome
+    C --> Outcome
+    N --> Outcome
+```
+
+The five forces compound. None of them work in isolation.
+
+---
+
 ## What it actually is
 
 **Build In Public** = doing your work *visibly* — sharing progress, decisions, mistakes, and outcomes as you go, instead of waiting to unveil a polished final product.
@@ -142,3 +165,31 @@ You post for 3 weeks then quit because "nothing's happening."
 - [ ] Have I committed (publicly!) to 12 weeks minimum?
 - [ ] Have I saved the templates somewhere I'll reuse them?
 - [ ] Did I post my "starting Module 3" update on LinkedIn?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Build in Public** | Sharing work-in-progress publicly on a regular cadence |
+| **Cadence** | How often you post — consistency matters more than virality |
+| **Compounding** | Each post helps the next reach more people; effect is invisible early on |
+| **Polish paralysis** | Refusing to post until something is "perfect" — kills momentum |
+| **Engagement obsession** | Optimizing for likes instead of career outcomes |
+| **Silent decay** | Posting for a few weeks then quitting — second-most-common failure |
+| **Vanity metrics** | Likes / followers — feel good but don't drive job offers |
+| **Hiring-manager comment** | A senior person commenting on your post — the real signal you want |
+| **Stuck post** | Sharing what you're stuck on — counter-intuitively the highest-credibility format |
+| **Mini-tutorial** | Short how-to-do-X post; highest-engagement format |
+| **Comparison post** | "Tried A vs B, here's what surprised me" — signals taste + judgment |
+| **Reflection post** | End-of-milestone post: what worked, what didn't, what's next |
+| **Loom** | Quick screen-recording with voiceover for project demos |
+| **Hashtag strategy** | 3-5 relevant tags; too many looks spammy |
+| **Inbound** | Recruiters reaching out to you (vs. you applying) — the goal |
+| **Async writing** | Posting + engaging on your own schedule (different skill from networking) |
+
+## Further reading
+- Next: [02-git-fundamentals.md](02-git-fundamentals.md)
+- Templates recap: [../00-bootcamp-introduction/04-build-in-public-intro.md](../00-bootcamp-introduction/04-build-in-public-intro.md)
+- Credibility prerequisites: [../02-online-credibility/02-credibility-opensource.md](../02-online-credibility/02-credibility-opensource.md)

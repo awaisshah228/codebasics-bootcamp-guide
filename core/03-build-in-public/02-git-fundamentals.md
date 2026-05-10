@@ -1,5 +1,51 @@
 # Session 2 — Getting Started with Git
 
+## In one sentence
+**Git is a time machine + save-state system for code** — every commit is a snapshot you can rewind to, branch from, and share with collaborators.
+
+## Real-world analogy
+Think of Git like the **save points in a video game**: you make a checkpoint (commit) before each tough section, can branch off into "what if I tried this differently?" (a branch), and if your experiment fails you load the last save (`git restore`). Without Git, every refactor feels like Russian roulette.
+
+## Mini worked example — your first repo
+
+```bash
+mkdir hello-git && cd hello-git
+git init                                   # start tracking this folder
+echo "# Hello Git" > README.md
+git add README.md                          # stage the file
+git commit -m "init: README"               # save snapshot #1
+
+echo "import pandas as pd" > app.py
+git add app.py
+git commit -m "add app skeleton"           # snapshot #2
+
+git log --oneline                          # see both snapshots
+# 8a4f2c1 add app skeleton
+# 3e9d12a init: README
+```
+
+Two snapshots, fully recoverable. That's the entire mental model.
+
+## At-a-glance — the three areas Git tracks
+
+```mermaid
+flowchart LR
+    WD[Working directory<br/>your edits in real-time] -- git add --> SA[Staging area<br/>what's ready for the next snapshot]
+    SA -- git commit --> R[Repository<br/>history of all snapshots]
+    R -- git push --> Remote[Remote<br/>e.g. GitHub]
+    Remote -- git pull --> WD
+```
+
+The **staging area** is the part most beginners skip — but it's why Git is more powerful than just "ctrl-S with a date stamp."
+
+## Why this matters
+- **Recover from disasters**: accidental delete? `git restore` it.
+- **Try risky changes safely**: branch off, experiment, throw away if it fails.
+- **Collaborate**: your teammate's changes merge into yours without overwriting.
+- **Build credibility**: a green-square commits graph on GitHub is recruiter catnip.
+
+---
+
 ## Why Git, in one paragraph
 
 Git is a **time machine + collaboration tool** for your code. Every save (commit) is a snapshot. You can rewind, branch off into experiments, merge them back, and share with others. Without Git, every team would lose work daily and every solo dev would be terrified of refactoring.
@@ -223,3 +269,43 @@ The mature path. Notebook = scratchpad. `.py` modules = real code.
 - [ ] How do I commit only some of my modified files?
 - [ ] What's the right way to write a commit message?
 - [ ] Why are notebooks tricky for Git, and what fixes it?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Git** | A version control system that tracks file changes as snapshots |
+| **Repository (repo)** | A folder Git is tracking |
+| **Working directory** | The actual files on your disk |
+| **Staging area / index** | The "selection" of changes you've prepared for the next commit |
+| **Commit** | A saved snapshot with a message |
+| **Hash** | The unique 40-character ID for each commit (often shown as 7 chars) |
+| **HEAD** | A pointer to your current commit (where you are in history) |
+| **Branch** | A parallel line of work — `main` is the default |
+| **`main` / `master`** | The default trunk branch (newer repos use `main`) |
+| **`.gitignore`** | A file listing patterns Git should NOT track (secrets, large data, caches) |
+| **`.gitconfig`** | Your global Git settings file (`~/.gitconfig`) |
+| **`git init`** | One-time command to start tracking a folder |
+| **`git status`** | Shows what's changed and what's staged |
+| **`git add`** | Move changes from working directory to staging |
+| **`git commit -m`** | Save staged changes as a snapshot with a message |
+| **`git log`** | Show the history of commits |
+| **`git diff`** | Show the actual line changes |
+| **`git restore`** | Undo file changes (modern command for `checkout` of file) |
+| **`git switch`** | Move between branches (modern command, replaces `checkout`) |
+| **`git reset --soft`** | Move HEAD back, keep changes staged |
+| **`git reset --mixed`** | Move HEAD back, keep changes unstaged (default) |
+| **`git reset --hard`** | Move HEAD back, **discard** changes — dangerous |
+| **`git reflog`** | Hidden log of every action — your safety net for recovering lost work |
+| **`git amend`** | Edit the most recent commit |
+| **Commit message** | A 1-3 line description of the change; imperative mood ("Add X") |
+| **`nbstripout`** | Tool that strips notebook outputs before commit so diffs are clean |
+| **Jupytext** | Tool that pairs `.ipynb` with a `.py` for version-control-friendly diffs |
+| **BFG / `git filter-repo`** | Tools to permanently delete large files or secrets from history |
+
+## Further reading
+- Next: [03-git-collaboration.md](03-git-collaboration.md)
+- GitHub-specific anatomy: [04-github-anatomy.md](04-github-anatomy.md)
+- LFS for big files (when needed): see [04-github-anatomy.md](04-github-anatomy.md)

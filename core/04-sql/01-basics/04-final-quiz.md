@@ -1,5 +1,61 @@
 # Section 4 — Final Quiz (Basics) + Transition
 
+---
+
+## In one sentence
+This is a self-test: if you can answer ten basics-level questions in under two minutes each, you're ready to move on; if you stumble, the relevant lecture link is right there.
+
+## Real-world analogy
+Like a driving test before getting on the highway. Each drill is a parallel-park or three-point-turn — you should be able to do it without thinking. Then the highway (advanced SQL, stats, ML) is safe to enter.
+
+## The intuition (plain English)
+Basics-level SQL is mostly muscle memory: order of execution, `WHERE` vs `HAVING`, when an INNER JOIN should have been a LEFT, why `WHERE col = NULL` returns zero rows. None of these are hard ideas — but they trip beginners every interview. This file gives you canonical answers and the seven query templates you should be able to write from a blank screen.
+
+## Mini worked example — the pattern that breaks beginners
+
+A LEFT JOIN that secretly becomes an INNER JOIN:
+
+```sql
+-- buggy — looks like LEFT JOIN, behaves like INNER
+SELECT c.name, o.amount
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+WHERE o.status = "paid";   -- this drops every customer with NO orders
+```
+
+The fix: move the filter to the ON clause:
+
+```sql
+SELECT c.name, o.amount
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id AND o.status = "paid";
+```
+
+If you can spot bugs like this, you'll pass the basics checkpoint.
+
+## At-a-glance — the basics quiz menu
+
+```mermaid
+flowchart TB
+    Q[Basics quiz] --> S[Single-table:<br/>WHERE, GROUP BY, HAVING]
+    Q --> M[Multi-table:<br/>INNER vs LEFT JOIN]
+    Q --> N[NULL traps:<br/>= NULL fails]
+    Q --> O[Order of execution]
+    Q --> A[Aggregates:<br/>COUNT*, COUNT col]
+    S --> P[Pass: move to advanced]
+    M --> P
+    N --> P
+    O --> P
+    A --> P
+```
+
+## Why this matters
+- Codebasics gates the advanced module behind this quiz; passing it means you can self-direct.
+- These exact patterns show up in technical screens for analyst roles.
+- Stuck on a question? The next module (Math & Stats) builds on the same "translate question -> code" muscle.
+
+---
+
 ## Quiz prep — what to drill
 
 The basics-level checkpoint usually covers:
@@ -151,3 +207,36 @@ Open `core/05-math-statistics/README.md` for the full plan.
 - [ ] I can map a business question to SQL in real time
 
 If any are shaky → re-watch the relevant lecture before taking the quiz.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Drill query** | A small canonical query you should be able to write in under 2 minutes |
+| **Order of execution** | FROM -> WHERE -> GROUP BY -> HAVING -> SELECT -> ORDER BY -> LIMIT |
+| **WHERE** | Filter on individual rows (before grouping) |
+| **HAVING** | Filter on grouped buckets (after `GROUP BY`) |
+| **GROUP BY** | Bucket rows by a column to compute per-bucket stats |
+| **NULL** | Missing/unknown value. Compare with `IS NULL`, never `= NULL` |
+| **COUNT(*)** | Counts all rows including NULLs |
+| **COUNT(col)** | Counts only rows where `col` is not NULL |
+| **LIKE** | Pattern match. `%` = any chars, `_` = single char |
+| **JOIN** | Combine tables on a shared column |
+| **INNER JOIN** | Keep matched rows only |
+| **LEFT JOIN** | Keep all left rows, NULL-fill the right when no match |
+| **LEFT-to-INNER bug** | When `WHERE` on the right table after a LEFT JOIN drops the unmatched rows you wanted to keep |
+| **Row inflation** | When joining a one-to-many table multiplies rows and breaks aggregates |
+| **CASE WHEN** | If/else branching inside a SELECT |
+| **EXPLAIN** | Show how the engine plans to run a query — uses indexes? scans? |
+| **Index** | A pre-sorted lookup that speeds `WHERE` and JOIN by orders of magnitude |
+| **Cardinality of join** | The output row count relative to inputs — sanity-check before trusting aggregates |
+| **Pre-quiz checklist** | The minimum set of moves you should have memorized before sitting the test |
+| **Practical significance** | Whether a result *matters* in business terms (preview of stats module) |
+
+## Further reading
+- Recap: [02-single-table-retrieval.md](02-single-table-retrieval.md) and [03-multiple-tables-joins.md](03-multiple-tables-joins.md)
+- Next module: [../../05-math-statistics/README.md](../../05-math-statistics/README.md) — turning data into decisions
+- Advanced SQL: [../02-advanced/01-subqueries-cte.md](../02-advanced/01-subqueries-cte.md)
+- Pandas drill set: [../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md](../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md) — same drills with `df` syntax

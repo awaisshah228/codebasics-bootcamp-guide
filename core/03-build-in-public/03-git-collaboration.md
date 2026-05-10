@@ -1,5 +1,58 @@
 # Session 3 — Fundamentals of Git Collaboration
 
+## In one sentence
+Solo Git is linear; **team / OSS Git is parallel** — and this session covers the four primitives that make parallel work safe: branches, remotes, pull requests, and merge-conflict resolution.
+
+## Real-world analogy
+Imagine a Google Doc where 5 people are editing simultaneously. Most edits don't collide — but two people editing the *same sentence* need to negotiate. Git's branches + PRs + conflict resolution are exactly that, formalized for code: everyone works on their own copy (branch / fork), proposes changes (PR), and two people editing the same line forces a manual merge.
+
+## Mini worked example — your first OSS-style PR
+
+```bash
+# 1. Fork the repo on github.com (button top-right)
+# 2. Clone your fork
+git clone https://github.com/<you>/codebasics-py.git
+cd codebasics-py
+
+# 3. Connect upstream so you can pull future updates
+git remote add upstream https://github.com/codebasics/py.git
+
+# 4. Branch off main for your change
+git switch -c fix-readme-typo
+
+# 5. Edit README.md → fix the typo
+
+# 6. Commit + push
+git add README.md
+git commit -m "Fix typo: 'recieve' -> 'receive' in README intro"
+git push -u origin fix-readme-typo
+
+# 7. Open a PR on GitHub: fix-readme-typo  →  codebasics/py:main
+```
+
+Done. You're now an open-source contributor with a merged PR you can put on your resume.
+
+## At-a-glance — fork → branch → PR
+
+```mermaid
+flowchart LR
+    Up[Upstream main<br/>codebasics/py] -- fork on GitHub --> Mine[Your fork<br/>you/py]
+    Mine -- git clone --> Local[Your laptop<br/>main branch]
+    Local -- git switch -c feature --> FB[feature branch]
+    FB -- commits --> FB2[feature with your changes]
+    FB2 -- git push origin --> Mine2[Your fork has the branch]
+    Mine2 -- Open PR --> Up
+    Up -- merged --> Done[Your name in their commit log]
+```
+
+## Why this matters
+- **Every job has team git** — solo skills aren't enough.
+- **PRs = code review training**: you'll do this every day in a real role.
+- **Conflicts will happen**; learning to resolve them confidently is a leveling-up moment.
+- **Forking + PRing** is the default OSS contribution flow — a high-credibility resume line.
+
+---
+
 ## What changes when you collaborate
 
 Solo Git: linear history, you commit and push, done.
@@ -265,3 +318,38 @@ This will probably be merged. You're now an official open-source contributor. Ad
 - [ ] What's `git stash` for?
 - [ ] What does `Closes #42` in a PR description do?
 - [ ] Have I opened my first PR yet?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Remote** | A named pointer to a Git server URL (`origin`, `upstream`) |
+| **`origin`** | Convention for *your* fork or the main repo if you have direct access |
+| **`upstream`** | Convention for the *original* repo you forked from |
+| **Clone** | Download a copy of a remote repo with full history (`git clone`) |
+| **Fork** | A GitHub-side copy of someone else's repo into your account |
+| **`git fetch`** | Download remote commits without merging |
+| **`git pull`** | Fetch + merge (or rebase) in one command |
+| **`git push`** | Upload your commits to the remote |
+| **Pull Request (PR)** | Formal proposal to merge your branch into someone else's branch |
+| **Merge** | Combine two branches; creates a merge commit |
+| **Fast-forward merge** | When the target branch hasn't diverged — simply moves the pointer |
+| **Rebase** | Replay your commits on top of another branch — keeps history linear |
+| **Merge commit** | The extra commit Git creates when combining diverged branches |
+| **Merge conflict** | When Git can't auto-combine because two branches edited the same lines |
+| **Conflict markers** | The `<<<<<<<`, `=======`, `>>>>>>>` lines Git inserts in conflicted files |
+| **`git stash`** | Set aside uncommitted work temporarily so you can switch branches |
+| **`git stash pop`** | Reapply the most recent stash and remove it |
+| **CODEOWNERS** | A file mapping paths → reviewers, auto-assigned on PR |
+| **Squash and merge** | PR merge strategy that combines all branch commits into one |
+| **Force-push** | Overwrites remote history (`--force`) — never on shared branches |
+| **`--force-with-lease`** | Safer force-push — fails if someone else pushed since you last fetched |
+| **CI (Continuous Integration)** | Automated tests/checks that run on every push or PR |
+| **Closes #42** | Magic phrase in a PR description that auto-closes issue #42 on merge |
+| **Triage** | The work of labeling, prioritizing, and routing issues |
+
+## Further reading
+- Next: [04-github-anatomy.md](04-github-anatomy.md)
+- Finding repos to contribute to: [05-finding-oss-projects.md](05-finding-oss-projects.md)

@@ -5,6 +5,71 @@
 
 ---
 
+## In one sentence
+**Bag of Words** turns each document into a vector of word counts; **n-grams** add tiny phrases like "not good"; **TF-IDF** re-weights those counts so common words ("the") get crushed and informative words ("vaccine") get amplified.
+
+## Real-world analogy
+Imagine each movie review is a grocery basket. Bag of Words is the receipt: how many times each word ended up in the basket, with order ignored. TF-IDF is a smarter receipt — it cares less about milk and bread (everyone buys those) and more about saffron or oat milk (rare items that tell you who the shopper is). N-grams add "two-item combos" to the receipt: noticing that "oat milk" is its own thing, not just "oat" plus "milk".
+
+## The intuition (plain English)
+The simplest way to feed text to a classifier is to count words. That's BoW. The problem is words like "the" appear everywhere and dominate the count without telling you anything about the document. TF-IDF fixes this by dividing each word's count by how many documents it shows up in — rare-but-present words win. N-grams patch BoW's other weakness: it ignores order, so "not good" and "good" look identical. Add bigrams and "not good" becomes its own feature.
+
+## Mini worked example — three movie reviews
+
+Three tiny reviews:
+```
+d1: "the movie was great"
+d2: "the movie was bad"
+d3: "great acting bad story"
+```
+
+Vocabulary: `the, movie, was, great, bad, acting, story`
+
+**Bag of Words counts:**
+
+|     | the | movie | was | great | bad | acting | story |
+|-----|-----|-------|-----|-------|-----|--------|-------|
+| d1  | 1   | 1     | 1   | 1     | 0   | 0      | 0     |
+| d2  | 1   | 1     | 1   | 0     | 1   | 0      | 0     |
+| d3  | 0   | 0     | 0   | 1     | 1   | 1      | 1     |
+
+**TF-IDF** — pick the word `"the"`:
+- Appears in 2 of 3 documents -> very common -> low IDF
+- `IDF("the") = log(3 / (1 + 2)) = log(1) = 0` -> weight collapses to zero
+
+Pick `"acting"`:
+- Appears in 1 of 3 -> rare
+- `IDF("acting") = log(3 / (1 + 1)) = log(1.5) ~= 0.405` -> stays in
+- `TF("acting", d3) = 1/4 = 0.25`
+- `TFIDF("acting", d3) ~= 0.25 * 0.405 = 0.101`
+
+So `"acting"` is a *signal* for d3, while `"the"` is noise.
+
+**Bigram example (`ngram_range=(1,2)`)**:
+Vocabulary now also contains `"not good"`, `"the movie"`, `"great acting"`, etc. A review saying "not good" gets a non-zero entry in the `"not good"` column, so a sentiment classifier can finally tell it apart from "good".
+
+## At-a-glance — three flavours of word features
+
+```mermaid
+flowchart TB
+    Text[Documents] --> A[Bag of Words<br/>raw counts]
+    Text --> B[Bag of n-grams<br/>counts of word combos]
+    Text --> C[TF-IDF<br/>counts re-weighted by rarity]
+    A --> M[(Document-term matrix<br/>one row per doc<br/>one column per word)]
+    B --> M
+    C --> M
+    M --> Clf[Classifier:<br/>Logistic Regression / SVM / Naive Bayes]
+```
+
+## Why this matters
+- TF-IDF + Logistic Regression is the strongest "no-GPU" baseline in NLP — often within 5pp of BERT.
+- It trains in seconds, runs in milliseconds, and explains *which words* drove a prediction.
+- Search engines (Elasticsearch, Lucene) still use BM25, a close cousin of TF-IDF.
+- Modern RAG systems use TF-IDF / BM25 alongside dense embeddings in **hybrid retrieval**.
+- If you ever need to ship NLP without a GPU, this is the toolkit.
+
+---
+
 ## 1. Bag of Words (BoW)
 
 Treat each document as a **multiset of words** (ignoring order). Each document → a vector of word counts.
@@ -210,3 +275,43 @@ print(classification_report(test.target, pipe.predict(test.data), target_names=t
 - [ ] What's BM25 and how does it relate to TF-IDF?
 - [ ] Build a TF-IDF + LogReg pipeline for sentiment in 10 lines.
 - [ ] Why is TF-IDF still relevant in 2025 even with LLMs?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Bag of Words (BoW)** | Represent a document by how many times each word appears, ignoring order |
+| **Document** | One piece of text (review, email, article) |
+| **Document-term matrix** | A table: rows = documents, columns = words, cells = counts |
+| **Vocabulary** | The set of unique words / n-grams the vectorizer keeps |
+| **n-gram** | A sequence of n adjacent tokens |
+| **Unigram / bigram / trigram** | n-grams of length 1, 2, 3 |
+| **TF** (Term Frequency) | How often a word appears in a single document |
+| **DF** (Document Frequency) | How many documents contain the word |
+| **IDF** (Inverse Document Frequency) | `log(N / DF)` — high if a word is rare across the corpus |
+| **TF-IDF** | TF * IDF — high if a word is common in *this* doc and rare in others |
+| **Sparse matrix** | A matrix mostly full of zeros, stored compactly (most BoW matrices are sparse) |
+| **`CountVectorizer`** | sklearn class that turns text into BoW counts |
+| **`TfidfVectorizer`** | sklearn class that turns text into TF-IDF weights |
+| **`min_df`** | Drop words that appear in fewer than `min_df` documents (cuts rare typos) |
+| **`max_df`** | Drop words that appear in too many documents (acts like a stopword filter) |
+| **`max_features`** | Keep only the top N most frequent words |
+| **`sublinear_tf`** | Use `1 + log(tf)` instead of raw `tf` to soften runaway counts |
+| **Stop words** | Common words like "the", "a", "is" — often dropped before vectorizing |
+| **BM25** | A TF-IDF cousin used by search engines (Elasticsearch, Solr) — better length normalization |
+| **Hashing trick** | Map words to fixed-size buckets via hashing, no vocabulary stored |
+| **`HashingVectorizer`** | sklearn implementation of the hashing trick |
+| **Cosine similarity** | A score from 0 to 1 telling how similar two TF-IDF vectors are |
+| **Logistic regression** | Simple linear classifier — the default partner for TF-IDF |
+| **Pipeline** | sklearn object chaining vectorizer + classifier so you fit / transform together |
+| **Data leakage** | Accidentally letting test info into training (e.g., fitting the vectorizer on test data) |
+| **Hybrid retrieval** | Combining sparse (TF-IDF / BM25) and dense (embedding) search for RAG |
+| **Sparse vs dense** | Sparse: most entries are zero (BoW). Dense: every entry is a real number (embeddings) |
+
+## Further reading
+- Next: [05-word-embeddings.md](05-word-embeddings.md) — dense vectors that capture meaning, not just counts
+- Project: [06-news-classification-spacy.md](06-news-classification-spacy.md) uses TF-IDF as the baseline
+- DL bridge: contextual embeddings from [BERT](../07-deep-learning/04-sequence/05-bert-huggingface.md) and [transformers](../07-deep-learning/04-sequence/03-transformer-architecture.md) are the modern step beyond TF-IDF
+- Style guide: [BEGINNER-STYLE-GUIDE.md](../../BEGINNER-STYLE-GUIDE.md)

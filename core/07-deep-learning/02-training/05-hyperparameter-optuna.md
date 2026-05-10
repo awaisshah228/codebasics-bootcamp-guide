@@ -6,6 +6,68 @@
 
 ---
 
+## In one sentence
+**Hyperparameter tuning** is searching for the best combination of training "knobs" (learning rate, dropout, layer size…) and **Optuna** is a smart search engine that learns from earlier guesses to pick promising next ones.
+
+## Real-world analogy
+Imagine baking cookies and you don't yet know the right temperature, time, and sugar amount. Grid search is *bake every possible combination* (slow). Random search is *try random combos* (often wasteful). Optuna is a baker who keeps notes — after 10 batches, she's noticed sugar matters most and 350°F always beats 400°F, so she focuses her next experiments around the promising region.
+
+## The intuition (plain English)
+- DL has many knobs and most of them don't matter; a few matter a lot. **Learning rate** almost always matters most.
+- **Optuna's TPE algorithm** is a Bayesian-flavored optimizer: try, observe, model the response surface, suggest better next.
+- **Pruning** kills clearly-bad trials early so you don't waste GPU hours on losers.
+- Use `log=True` for parameters that span orders of magnitude (lr, weight_decay) — otherwise the search effectively ignores tiny values.
+
+## Mini worked example — searching learning rate and dropout
+
+```python
+import optuna
+
+def objective(trial):
+    lr      = trial.suggest_float("lr",      1e-5, 1e-1, log=True)
+    dropout = trial.suggest_float("dropout", 0.0,  0.5)
+    val_loss = train_for_a_few_epochs(lr=lr, dropout=dropout)
+    return val_loss                  # Optuna minimizes this
+
+study = optuna.create_study(direction="minimize")
+study.optimize(objective, n_trials=20)
+
+print(study.best_params)
+# Possible result: {"lr": 0.0017, "dropout": 0.21}
+# best_value: 0.143
+```
+
+After 20 trials Optuna already concentrates samples near the best region — far more efficient than 20 random guesses.
+
+## At-a-glance — the tuning workflow
+
+```mermaid
+flowchart LR
+    A[Define objective] --> B[Sample hyperparams<br/>trial.suggest_*]
+    B --> C[Train + validate]
+    C --> D[Report metric]
+    D --> E{Looks bad?}
+    E -- yes --> P[Prune trial]
+    E -- no  --> F[Keep training]
+    F --> D
+    P --> A
+    F --> G[Final score]
+    G --> A
+```
+
+```
+   Stage 1 (10-30 trials, wide ranges)  ─► identify which knobs matter
+   Stage 2 (50-100 trials, narrow ranges around best) ─► fine tune
+   Stage 3 (1 long final run with best config) ─► production
+```
+
+## Why this matters
+- A bad learning rate alone can make a model look "broken" — tuning rescues weeks of confusion.
+- Optuna with pruning turns "infeasible" tuning into "overnight on one GPU."
+- Visualizing **param importances** tells you which knobs to keep tuning and which to fix.
+
+---
+
 ## 1. The DL hyperparameter zoo
 
 Compared to classical ML (where you tune ~5 things), deep learning has many:
@@ -203,3 +265,41 @@ For DL, **pruning is the difference between feasible and infeasible** tuning.
 - [ ] Difference between `suggest_categorical` and `suggest_int`?
 - [ ] When use Optuna over GridSearch / RandomSearch?
 - [ ] Why is pruning especially valuable for DL vs classical ML tuning?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Hyperparameter** | A "knob" you set before training (lr, dropout) — vs *parameter* which the model learns |
+| **Parameter** | A weight inside the model that gradient descent learns |
+| **Tuning / HPO** | Hyperparameter Optimization — searching for the best knob combination |
+| **Optuna** | Open-source HPO library with smart sampling and pruning |
+| **Trial** | One attempt at a hyperparameter combination |
+| **Study** | A collection of trials sharing one objective |
+| **Objective function** | The function Optuna calls each trial; returns the score to minimize/maximize |
+| **TPE (Tree-structured Parzen Estimator)** | Optuna's default Bayesian-flavored sampler |
+| **Bayesian optimization** | Use past trial scores to model the score surface and pick promising next points |
+| **Grid search** | Try every combination on a regular grid — exhaustive and slow |
+| **Random search** | Try random combinations — often surprisingly competitive |
+| **`suggest_float(name, low, high, log=True)`** | Sample a float, log-uniformly across orders of magnitude |
+| **`suggest_int`** | Sample an integer in a range |
+| **`suggest_categorical`** | Pick from a discrete list (e.g., optimizer name) |
+| **Pruning** | Stop a trial early when its progress looks unpromising |
+| **`trial.report` / `trial.should_prune`** | Optuna's hooks for early stopping a trial |
+| **Conditional search space** | A hyperparameter only sampled when another takes a specific value |
+| **Param importances** | A score telling which hyperparameters most affect the metric |
+| **Optimization history** | Plot of trial scores over time |
+| **Parallel coordinate plot** | Visualization showing how each param value relates to the metric |
+| **Storage / SQLite** | Optuna's database for persisting and resuming studies |
+| **`load_if_exists=True`** | Reuse an existing Optuna study on rerun |
+| **Validation set** | Held-out data used to score each trial — never the test set |
+| **Search budget** | Total trials or compute you allow for tuning |
+| **Seed / reproducibility** | Setting a fixed random seed so the same search reproduces |
+| **Cross-validation** | Splitting data into folds and averaging scores — used in classical ML, rare in DL |
+
+## Further reading
+- Optimizer choices that show up in your search space: [03-optimizers-momentum-adam.md](03-optimizers-momentum-adam.md)
+- Regularization knobs to tune: [04-regularization-dropout-batchnorm.md](04-regularization-dropout-batchnorm.md)
+- Optuna docs: https://optuna.readthedocs.io

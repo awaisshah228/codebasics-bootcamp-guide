@@ -5,6 +5,68 @@
 
 ---
 
+## In one sentence
+**pandas** turns Python into a programmable spreadsheet — the `DataFrame` is your table, and you load, clean, group, join, and chart it with a few lines instead of clicking through menus.
+
+## Real-world analogy
+Imagine an Excel workbook where every operation (filter, sort, pivot, chart) is a one-line command you can repeat, version-control, and apply to a new file in seconds. That is pandas. Once you load a CSV, every analytical question becomes a recipe you can re-run on next month's data with no extra clicks.
+
+## The intuition (plain English)
+A `DataFrame` is a 2D labeled table; a `Series` is a single column. Use `df.head()` and `df.info()` as the first two lines after loading anything new. Filter with **boolean masks** (`df[df["age"] > 25]`). Group with `df.groupby("city")["revenue"].sum()`. Join two tables with `pd.merge`. Visualize with seaborn for fast defaults or matplotlib for fine control. Missing values are NaN — you decide whether to drop or fill them, never blindly.
+
+## Mini worked example
+Load a tiny customer table and answer a real question:
+
+```python
+import pandas as pd
+
+df = pd.DataFrame({
+    "name":  ["Alice", "Bob", "Charlie", "Diana", "Eve"],
+    "city":  ["NY",    "LA",  "NY",       "SF",   "LA"],
+    "age":   [30,      25,    35,         28,     32],
+    "spend": [120,     80,    200,        150,    90],
+})
+
+# 1. shape + first peek
+print(df.shape)                                # (5, 4)
+print(df.head(3))
+
+# 2. Average spend per city — the workhorse pattern
+per_city = df.groupby("city")["spend"].mean()
+print(per_city)
+# city
+# LA     85.0
+# NY    160.0
+# SF    150.0
+
+# 3. Filter: customers older than 28 from NY
+print(df[(df["age"] > 28) & (df["city"] == "NY")])
+```
+
+Three lines: read, group, filter. That is 80% of EDA.
+
+## At-a-glance — the EDA workflow
+
+```mermaid
+flowchart TB
+    Load[df = pd.read_csv 'data.csv'] --> Peek[df.head, df.info]
+    Peek --> Stats[df.describe]
+    Stats --> NA{Missing values?}
+    NA -- yes --> Decide[drop or fill — investigate why first]
+    NA -- no --> Filter[boolean masks<br/>to slice questions]
+    Decide --> Filter
+    Filter --> Group[groupby + agg]
+    Group --> Plot[seaborn / matplotlib]
+    Plot --> Insight[3-5 bullet insights<br/>for stakeholder]
+```
+
+## Why this matters
+- pandas is the daily driver of every data analyst and most data scientists.
+- The same workflow scales from a 100-row CSV to a 100M-row Parquet file with `pyarrow`.
+- Project 1 (Hospitality EDA) is built entirely on the patterns in this file.
+
+---
+
 ## 1. Pandas — what it actually is
 
 A **DataFrame** is a 2D labeled table — like a spreadsheet, like a SQL table, but Python-native and lightning fast.
@@ -294,3 +356,52 @@ This is exactly what Project 1 (Hospitality EDA) walks through — see `02-proje
 - [ ] When would I use a `pivot_table`?
 - [ ] How do I plot a histogram of `age` with KDE in seaborn?
 - [ ] What does `SettingWithCopyWarning` mean and how do I fix it?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **pandas** | The Python library for tabular data |
+| **DataFrame** | A 2D labeled table — rows × columns, like a sheet |
+| **Series** | A single column with an index |
+| **Index** | The row labels of a DataFrame (often 0, 1, 2, ... by default) |
+| **`read_csv` / `read_excel`** | Load data from disk into a DataFrame |
+| **`to_csv`** | Save a DataFrame to disk |
+| **`head` / `tail`** | First / last N rows |
+| **`info`** | Per-column dtype and non-null count |
+| **`describe`** | Summary stats for numeric (or string) columns |
+| **`dtype`** | Type of a column — `int64`, `float64`, `object` (string), `datetime64` |
+| **`loc`** | Selection by label |
+| **`iloc`** | Selection by integer position |
+| **Boolean mask** | A series of True/False used to filter rows |
+| **`query`** | String-based filter: `df.query("age > 25")` |
+| **`apply`** | Run a function over each row or column |
+| **`assign`** | Chainable way to add or modify columns |
+| **NaN / NA** | Missing value marker |
+| **`isna` / `notna`** | Tests for missing values |
+| **`fillna`** | Replace missing values |
+| **`dropna`** | Drop rows or columns with missing values |
+| **`ffill / bfill`** | Forward / backward fill — common for time series |
+| **`groupby`** | Split rows into groups, run an aggregation per group, combine |
+| **`agg`** | Run multiple aggregations at once |
+| **`transform`** | Group-aware operation that keeps the original shape |
+| **`pivot_table`** | Cross-tab: rows × columns × values × aggregator |
+| **`concat`** | Stack DataFrames row-wise or column-wise |
+| **`merge`** | SQL-style join on keys |
+| **Inner / left / outer join** | Which rows survive when keys do not match on both sides |
+| **`indicator=True`** | Adds a column showing whether each row was matched left/right/both |
+| **EDA** (Exploratory Data Analysis) | The first-look workflow on any new dataset |
+| **matplotlib** | The base plotting library — full control, more code |
+| **seaborn** | A higher-level wrapper around matplotlib with prettier defaults |
+| **KDE** (Kernel Density Estimate) | A smoothed version of a histogram |
+| **`SettingWithCopyWarning`** | Pandas warning about ambiguous chained indexing — fix with `.loc[..., ...] = ...` |
+| **Parquet** | A compact columnar file format — smaller and faster than CSV |
+| **IQR** (Interquartile Range) | 75th percentile − 25th — robust spread measure |
+
+## Further reading
+- Project 1 applies all of this: [../02-projects/01-hospitality-eda.md](../02-projects/01-hospitality-eda.md)
+- Distributions and outliers: [../../05-math-statistics/01-foundations/04-distributions.md](../../05-math-statistics/01-foundations/04-distributions.md)
+- ML feature engineering builds on EDA: [../../06-machine-learning/01-foundations/05-preprocessing-encoding.md](../../06-machine-learning/01-foundations/05-preprocessing-encoding.md)
+- Next module: [../03-advanced/01-comprehensions-sets.md](../03-advanced/01-comprehensions-sets.md)

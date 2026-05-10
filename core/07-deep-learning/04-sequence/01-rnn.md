@@ -6,6 +6,78 @@
 
 ---
 
+## In one sentence
+A **Recurrent Neural Network (RNN)** processes a sequence one item at a time while keeping a "running memory" of what it saw before — perfect for language, audio, and time-series where order matters.
+
+## Real-world analogy
+Reading a sentence word by word: you don't reset your understanding on each word, you carry forward a running impression that gets updated. After "The cat sat on the…", you're already expecting *mat / sofa / floor*. An RNN does the same — it keeps a hidden state that's updated by each new word.
+
+## The intuition (plain English)
+- Unlike an MLP/CNN that sees everything at once, an RNN takes in **one timestep at a time** (one word, one audio frame, one daily price).
+- Each step's output depends on **(this input)** AND **(memory from the past)**.
+- The same weight matrices are reused at every step → fixed parameter count regardless of sequence length.
+- Vanilla RNNs **forget** what they saw long ago because the gradient shrinks as it flows back through time (the **vanishing gradient** problem). LSTM and Transformer fix this differently.
+
+## Mini worked example — sentiment classification on a 4-word review
+
+Sequence: "the movie was great". The RNN processes one word at a time:
+
+```
+                                                       hidden state h_t
+                                                       (running impression)
+
+t=1  word="the"     → h_1 = tanh(W_xh · emb("the")    + W_hh · h_0  + b_h) = [0.10, -0.05]
+t=2  word="movie"   → h_2 = tanh(W_xh · emb("movie")  + W_hh · h_1  + b_h) = [0.15,  0.02]
+t=3  word="was"     → h_3 = tanh(W_xh · emb("was")    + W_hh · h_2  + b_h) = [0.18,  0.08]
+t=4  word="great"   → h_4 = tanh(W_xh · emb("great")  + W_hh · h_3  + b_h) = [0.45,  0.62]
+                                                                              ↑
+                                                            "great" pulled the state strongly
+                                                              positive — encoded sentiment
+
+Final classifier:  logits = W_hy · h_4 + b_y → softmax → "positive" with 92% confidence
+```
+
+Same RNN, same weights, every step — the **memory** does the heavy lifting.
+
+## At-a-glance — the RNN unrolled across time
+
+```
+   t=1            t=2            t=3            t=4
+
+  h₀ ──► [RNN] ──► h₁ ──► [RNN] ──► h₂ ──► [RNN] ──► h₃ ──► [RNN] ──► h₄
+          ▲              ▲              ▲              ▲
+          │              │              │              │
+        x₁="the"      x₂="movie"     x₃="was"       x₄="great"
+                                                       │
+                                                       ▼
+                                                    classify
+                                                    (positive / negative)
+
+   Same weights W_xh, W_hh, W_hy reused every timestep.
+```
+
+```mermaid
+flowchart LR
+    H0[h_0] --> R1[RNN cell]
+    X1[x_1] --> R1
+    R1 --> H1[h_1]
+    H1 --> R2[RNN cell]
+    X2[x_2] --> R2
+    R2 --> H2[h_2]
+    H2 --> R3[RNN cell]
+    X3[x_3] --> R3
+    R3 --> H3[h_3]
+    H3 --> Y[Classifier]
+    Y --> O[positive/negative]
+```
+
+## Why this matters
+- The RNN is the gateway architecture to all sequence models — once you understand `h_t = f(x_t, h_{t-1})`, LSTMs and Transformers become natural extensions.
+- The **vanishing gradient** problem here motivates *every* later architecture (LSTM, GRU, Transformer).
+- Many real systems (streaming speech, on-device keyboards, small forecasting models) still use RNNs because they're tiny and fast.
+
+---
+
 ## 1. The sequence problem
 
 CNNs/MLPs see a fixed-size input. Real-world sequences (text, audio, time-series) have variable length and **order matters**:
@@ -169,3 +241,42 @@ Train it on Shakespeare text → generates Shakespeare-ish text. Karpathy's clas
 - [ ] What's gradient clipping and why is it needed for RNNs?
 - [ ] What's the difference between "many-to-one" and "many-to-many" RNN setups?
 - [ ] Implement a sentiment classifier with `nn.LSTM`.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Sequence** | An ordered series of inputs (words, time steps, audio frames) |
+| **Timestep** | One position in the sequence |
+| **RNN** | Recurrent Neural Network — processes a sequence one step at a time |
+| **Hidden state (h_t)** | The "memory" passed from one timestep to the next |
+| **Recurrence** | The idea that the next state depends on the previous state |
+| **`W_xh`, `W_hh`, `W_hy`** | Input→hidden, hidden→hidden, hidden→output weight matrices |
+| **`tanh`** | Default RNN activation; range (−1, 1) |
+| **Embedding** | Trainable vector representing a word/token |
+| **`nn.Embedding`** | PyTorch lookup that maps token IDs to vectors |
+| **`nn.RNN`** | PyTorch's vanilla recurrent layer |
+| **`batch_first=True`** | Tells PyTorch the input is (batch, seq, features) instead of (seq, batch, features) |
+| **`num_layers`** | How many RNN layers to stack |
+| **Bidirectional** | Process the sequence forward and backward, then concatenate |
+| **Many-to-one** | One output per sequence (e.g., sentiment classification) |
+| **One-to-many** | Generate a sequence from one input (e.g., image captioning) |
+| **Many-to-many** | Output token per input token (e.g., POS tagging) |
+| **Encoder-decoder** | Two RNNs: one encodes input into a vector, one decodes into output |
+| **BPTT (Backpropagation Through Time)** | Backprop applied to the unrolled RNN across timesteps |
+| **Vanishing gradient** | Gradients shrink exponentially across long sequences — early steps stop learning |
+| **Exploding gradient** | Gradients grow without bound — usually causes NaN losses |
+| **Gradient clipping** | Cap gradient norm to avoid explosions |
+| **`clip_grad_norm_`** | PyTorch utility for gradient clipping |
+| **Detach** | `.detach()` — stop gradient tracking, used to break backprop chains across batches |
+| **Padding** | Filling shorter sequences with a dummy token so they share a length in a batch |
+| **Packed sequence** | Tensor format that lets RNNs skip padding tokens efficiently |
+| **POS tagging** | Labeling each word with its part of speech |
+| **Streaming inference** | Producing outputs as inputs arrive, one step at a time |
+
+## Further reading
+- Visual + math reference: [../architectures-and-math.md](../architectures-and-math.md)
+- Next: [02-lstm.md](02-lstm.md) — gated cells that beat the vanishing-gradient problem
+- Modern replacement: [03-transformer-architecture.md](03-transformer-architecture.md)

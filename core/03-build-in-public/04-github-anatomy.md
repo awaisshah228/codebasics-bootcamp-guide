@@ -1,5 +1,56 @@
 # Session 4 — Anatomy of GitHub Repository
 
+## In one sentence
+A GitHub repo is **far more than a code folder** — it's a project hub bundling code, docs, issues, PRs, automation (Actions), and a public face — and knowing each tab makes you 10× faster at navigating any OSS repo and shipping clean ones of your own.
+
+## Real-world analogy
+A GitHub repo is like a **building** with multiple floors:
+- Ground floor (Code) — the apartment itself
+- Visitor's notice board (Issues) — bug reports & feature requests
+- Mailroom (Pull Requests) — proposed changes under review
+- Security desk (Actions) — auto-checks every visitor
+- Concierge directory (README) — first thing every visitor reads
+- Building rules (CONTRIBUTING.md, LICENSE) — posted on the door
+
+Most learners use only the ground floor. Power users know every floor.
+
+## At-a-glance — the 8 main tabs
+
+```mermaid
+flowchart LR
+    Code[Code<br/>files · branches · tags] --> README[README<br/>your repo's homepage]
+    Issues[Issues<br/>bug + feature tracker]
+    PR[Pull Requests<br/>proposed changes]
+    Actions[Actions<br/>CI · automation]
+    Projects[Projects<br/>kanban boards]
+    Wiki[Wiki<br/>multi-page docs]
+    Security[Security<br/>vuln + secret scans]
+    Insights[Insights<br/>activity graphs]
+```
+
+## Mini worked example — a 5-minute repo polish
+
+For any project repo:
+
+```
+1. Repo description (one-liner under title)            ← 30 seconds
+2. Topics (`data-analysis`, `python`, `pandas`)        ← 30 seconds
+3. README with screenshot + how-to-run                 ← 2 minutes
+4. LICENSE file (MIT)                                  ← 1 click
+5. .gitignore for Python                               ← 1 click via GitHub
+6. Pin the repo to your profile                        ← 1 click
+```
+
+Six tiny actions = a recruiter-ready repo. Most people skip them and wonder why their GitHub looks empty.
+
+## Why this matters
+- **First-glance trust**: a polished repo signals you understand professional engineering norms.
+- **Speed**: knowing keyboard shortcuts (`t`, `.`, `g i`, `g p`) makes navigation effortless.
+- **Automation**: a 10-line GitHub Actions workflow means every push runs your tests automatically.
+- **Discoverability**: topics + description = your repo appears in GitHub search + Google.
+
+---
+
 ## Overview
 
 A GitHub repo is more than a code folder. It's a project hub with:
@@ -273,3 +324,42 @@ For the bootcamp: keep an eye on the **commits graph** — green daily activity 
 - [ ] Have I created my first release with notes + screenshot?
 - [ ] Have I starred ≥10 repos relevant to my niche?
 - [ ] Do I know what `CODEOWNERS` does without looking?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Repo (repository)** | A project's GitHub home — code + docs + issues + history |
+| **README.md** | The first thing visitors see; rendered as your repo's home page |
+| **Issues** | The bug + feature tracker tab |
+| **Labels** | Tags like `bug`, `good first issue`, `help wanted` for filtering issues |
+| **Milestone** | Group of issues targeting a release |
+| **Pull Request (PR)** | Proposed code change under review |
+| **Files changed** | The diff view in a PR |
+| **Conversation** | The discussion thread in a PR or issue |
+| **Checks** | CI pipeline status on a PR (green = passing, red = failing) |
+| **Actions** | GitHub's CI/CD platform — runs YAML workflows on events |
+| **Workflow** | A YAML file in `.github/workflows/` defining automation |
+| **Runner** | The virtual machine that executes a workflow (Ubuntu, macOS, Windows) |
+| **Projects (v2)** | GitHub's flexible Kanban / table / roadmap boards |
+| **Wiki** | Per-repo collaborative docs (alternative to a `docs/` folder) |
+| **Releases** | UI on top of a tag — adds notes + downloadable assets |
+| **Tag** | A named pointer to a specific commit, e.g. `v1.0.0` |
+| **Dependabot** | Bot that flags vulnerable dependencies and proposes upgrade PRs |
+| **Secret scanning** | GitHub auto-detection of API keys committed to public repos |
+| **CodeQL** | GitHub's static analysis tool for finding vulnerabilities |
+| **Insights tab** | Per-repo analytics — Pulse, Contributors, Commits, Network |
+| **github.dev** | Web VS Code launched by hitting `.` on any repo |
+| **Topic** | A tag attached to a repo for discoverability (`data-science`) |
+| **CODEOWNERS** | A file auto-assigning reviewers to PRs based on which files changed |
+| **CONTRIBUTING.md** | Project guidelines for new contributors — read before opening a PR |
+| **CODE_OF_CONDUCT.md** | Community-behavior rules |
+| **LICENSE** | Legal terms for reuse — MIT and Apache 2.0 are common defaults |
+| **GitHub Pages** | Free static-site hosting from a `gh-pages` branch or `/docs` folder |
+| **Permalink (`y`)** | Stable URL to a specific commit's version of a line — survives edits |
+
+## Further reading
+- Next: [05-finding-oss-projects.md](05-finding-oss-projects.md)
+- Push your projects to GitHub: [../02-online-credibility/04-python-projects-to-github.md](../02-online-credibility/04-python-projects-to-github.md)

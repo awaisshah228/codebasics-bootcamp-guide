@@ -10,6 +10,62 @@
 
 ---
 
+## In one sentence
+A **data warehouse** is a database optimized for analysis (reading lots, writing rarely), and **ETL** is the pipeline that copies data from operational databases into the warehouse — cleaning and reshaping it on the way.
+
+## Real-world analogy
+Your business runs on a checkout system that handles thousands of small transactions per second — that's **OLTP**. But the CEO wants quarterly trends, top customers, segmented dashboards. Asking those questions of the live checkout database would slow down the website. So you nightly **ETL** a copy of the data into a separate warehouse — like exporting transactions to a reporting database — and run analytics there. Same data, different room, different rules.
+
+## The intuition (plain English)
+**OLTP** databases are tuned for many small reads and writes (orders, logins). **OLAP** databases are tuned for big aggregations (`SUM`, `GROUP BY` over millions of rows). They have different schemas: OLTP is normalized for write safety; OLAP is denormalized into a **star schema** (one big fact table + small dimension tables) for read speed. **ETL** — Extract, Transform, Load — is the pipeline that moves data between them. Modern teams often do **ELT** instead: load raw, then transform inside the warehouse with SQL. The whole pattern enables clean separation: app teams own OLTP, analytics teams own the warehouse.
+
+## Mini worked example — turning OLTP rows into a fact table
+
+Source OLTP `orders` table (normalized):
+
+```
+order_id | customer_id | product_id | qty | placed_at
+---------+-------------+------------+-----+--------------------
+  100123 |          12 |          7 |   3 | 2026-05-09 14:22:01
+  100124 |          12 |          9 |   1 | 2026-05-09 14:22:01
+  100125 |          77 |          7 |   2 | 2026-05-10 09:15:33
+```
+
+After ETL, the warehouse `fact_sales` table (denormalized, with date_key + measures):
+
+```
+sale_id | date_key | customer_id | product_id | quantity | revenue
+--------+----------+-------------+------------+----------+--------
+ 100123 | 20260509 |          12 |          7 |        3 |  150.00
+ 100124 | 20260509 |          12 |          9 |        1 |   25.00
+ 100125 | 20260510 |          77 |          7 |        2 |  100.00
+```
+
+Plus dimension tables (`dim_customer`, `dim_product`, `dim_date`) for descriptive attributes. Analyst questions like "revenue per product per month" become a single fact-to-dim join — fast.
+
+## At-a-glance — the warehouse pattern
+
+```mermaid
+flowchart LR
+    OLTP[OLTP source DBs] --> E[Extract]
+    E --> T[Transform<br/>clean, dedupe, denormalize]
+    T --> L[Load into warehouse]
+    L --> F[(fact_sales)]
+    L --> D1[(dim_customer)]
+    L --> D2[(dim_product)]
+    L --> D3[(dim_date)]
+    F --- D1
+    F --- D2
+    F --- D3
+```
+
+## Why this matters
+- Most data analyst / data engineer roles are warehouse-side work. Understanding fact vs dim is interview-required.
+- The **star schema** is the canonical answer to "how do I make this dashboard fast?"
+- ETL/ELT is the bridge between raw operational data and the clean datasets ML models train on. See [../../06-machine-learning/01-foundations/05-preprocessing-encoding.md](../../06-machine-learning/01-foundations/05-preprocessing-encoding.md).
+
+---
+
 ## 1. OLTP vs OLAP — two different worlds
 
 | | OLTP | OLAP |
@@ -231,3 +287,45 @@ A simple Trello / Notion / GitHub Projects board with columns: **Up Next**, **St
 - [ ] Three types of SCD and when to use each?
 - [ ] What's a data catalog and why do orgs need one?
 - [ ] Set up a Kanban board for your bootcamp progress.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **OLTP** | Online Transactional Processing — small, frequent writes from running apps. MySQL, Postgres |
+| **OLAP** | Online Analytical Processing — big read-heavy queries for dashboards. Snowflake, BigQuery, Redshift |
+| **Data warehouse** | A database tuned for analytical queries. Schema is denormalized for read speed |
+| **Data lake** | Raw storage of any-format files (Parquet, JSON, images) — schema-on-read |
+| **Data lakehouse** | Lake + warehouse hybrid (Databricks, Iceberg, Delta) — modern dominant pattern |
+| **Data mart** | A slice of the warehouse for one team or domain (e.g., marketing mart) |
+| **ETL** | Extract -> Transform -> Load. Transform happens before loading |
+| **ELT** | Extract -> Load -> Transform. Load raw, then transform inside the warehouse with SQL/dbt |
+| **CDC (Change Data Capture)** | Streaming only the changes since last load, instead of full re-extracts |
+| **Staging area** | The intermediate "raw landing zone" between source and warehouse |
+| **Star schema** | A fact table in the middle, dimension tables radiating out |
+| **Snowflake schema** | Star schema where dimensions are further normalized |
+| **Fact table** | The grid of measurements + foreign keys to dimensions. Rows are events |
+| **Dimension table** | Descriptive attributes (customer, product, date). Few rows, many columns |
+| **Measure** | A numeric column you can sum or average (revenue, quantity) |
+| **Grain** | What one row of a fact table represents — e.g., "one sale of one product on one day" |
+| **Transactional fact** | One row per business event (sale, click) |
+| **Periodic snapshot** | One row per entity per period (daily account balance) |
+| **Accumulating snapshot** | One row per process, updated as it progresses |
+| **Factless fact** | A fact table with no measures, just relationships (e.g., attendance) |
+| **SCD Type 1** | Overwrite the dimension column — no history kept |
+| **SCD Type 2** | Insert a new dimension row per change with `valid_from`/`valid_to` — full history |
+| **SCD Type 3** | Add a "previous value" column — partial history |
+| **Surrogate key (sk)** | An artificial key per dimension version, separate from the natural business id |
+| **Natural / business key** | The real-world id that doesn't change (customer_id, product_sku) |
+| **Data catalog** | A metadata directory of every dataset — table names, owners, descriptions, lineage |
+| **Lineage** | The map of "this table comes from these source tables" |
+| **dbt** | A tool that turns SELECT statements into a managed warehouse-side ELT pipeline |
+| **Kanban** | A simple project-management approach: cards flow across To Do -> In Progress -> Done columns |
+
+## Further reading
+- Next: [06-functions-procedures-views.md](06-functions-procedures-views.md) — packaging warehouse logic
+- Project work: [09-projects.md](09-projects.md) — both projects build star-schema deliverables
+- ML data prep: [../../06-machine-learning/01-foundations/05-preprocessing-encoding.md](../../06-machine-learning/01-foundations/05-preprocessing-encoding.md) — feature stores are warehouse outputs
+- Style guide: [../../../BEGINNER-STYLE-GUIDE.md](../../../BEGINNER-STYLE-GUIDE.md)

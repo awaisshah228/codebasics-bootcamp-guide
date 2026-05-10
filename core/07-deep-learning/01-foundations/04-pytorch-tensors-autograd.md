@@ -7,6 +7,63 @@
 
 ---
 
+## In one sentence
+**PyTorch** gives you two superpowers: a NumPy-like array (the **tensor**) that runs on the GPU, and an automatic gradient engine (**autograd**) that does the calculus for you so you can train any neural net.
+
+## Real-world analogy
+Imagine a spreadsheet that (1) runs on a thousand-core supercomputer instead of one core, and (2) remembers every formula you typed so it can compute every cell's sensitivity to every input automatically. That's a tensor with autograd. You write `y = x**2 + 3`, ask "how does y change with x?", and PyTorch answers without you doing any calculus.
+
+## The intuition (plain English)
+- A **tensor** is just a multi-dimensional array — scalar (0D), vector (1D), matrix (2D), image (3D), batch of images (4D).
+- Add `requires_grad=True` and PyTorch silently builds a **computation graph** as you do math on the tensor.
+- Call `.backward()` and PyTorch walks the graph backwards to compute every derivative automatically.
+- The **training loop** is always the same six lines: forward → loss → zero grads → backward → step → repeat.
+
+## Mini worked example — autograd in three lines
+
+You want the derivative of `y = x² + 3x + 1` at `x = 2`. Calculus says `dy/dx = 2x + 3 = 7`.
+
+```python
+import torch
+
+x = torch.tensor(2.0, requires_grad=True)   # we want grad with respect to x
+y = x**2 + 3*x + 1                          # forward pass; PyTorch records ops
+y.backward()                                # walk graph back, compute dy/dx
+print(x.grad)                               # tensor(7.)   ← matches 2(2)+3
+```
+
+That same machinery scales to a network with 100 million parameters — you never write a derivative again.
+
+## At-a-glance — the canonical PyTorch training loop
+
+```mermaid
+flowchart LR
+    A[Get a batch] --> B[Forward: model x]
+    B --> C[Compute loss]
+    C --> D[optimizer.zero_grad]
+    D --> E[loss.backward]
+    E --> F[optimizer.step]
+    F --> A
+```
+
+```
+for x, y in loader:                       # batch
+    logits = model(x)                     # forward
+    loss   = loss_fn(logits, y)           # compute loss
+    optimizer.zero_grad()                 # reset old gradients
+    loss.backward()                       # autograd: compute new gradients
+    optimizer.step()                      # update weights
+```
+
+Memorize these six lines — every CNN, RNN, Transformer training loop in this module follows this exact shape.
+
+## Why this matters
+- Tensors + autograd are why you can prototype a new architecture in 30 lines instead of writing a calculus textbook.
+- The "data ↔ device" rules (CPU vs GPU) cause 80% of beginner errors — knowing them saves hours.
+- `model.train()` vs `model.eval()` and `torch.no_grad()` are tiny lines with huge effects on accuracy and memory.
+
+---
+
 ## 1. Installation
 
 ### CPU-only (works on any laptop)
@@ -261,3 +318,42 @@ torch.save({
 - [ ] What do `model.train()` and `model.eval()` toggle?
 - [ ] When to use `state_dict()` vs `torch.save(model)`?
 - [ ] What's a DataLoader and why use one?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Tensor** | PyTorch's n-dimensional array — like a NumPy array but GPU-capable and gradient-aware |
+| **Scalar / Vector / Matrix / 4D tensor** | 0D / 1D / 2D / 4D arrays. Images are typically 4D: (batch, channels, height, width) |
+| **dtype** | Numerical type stored in the tensor (`float32`, `int64`, `bool`, …) |
+| **device** | Where the tensor lives: `"cpu"`, `"cuda"`, or `"mps"` (Apple Silicon) |
+| **CUDA** | NVIDIA's GPU programming platform; required for GPU PyTorch on NVIDIA cards |
+| **MPS** | Apple's Metal Performance Shaders backend for Apple-Silicon GPUs |
+| **`.to(device)`** | Move a tensor or model between CPU and GPU |
+| **`requires_grad`** | Flag on a tensor that tells PyTorch to track ops on it for autograd |
+| **Computation graph** | Hidden DAG PyTorch builds while you do math; used during `.backward()` |
+| **autograd** | PyTorch's automatic-differentiation engine — computes gradients via the chain rule |
+| **`backward()`** | Walks the graph backwards and fills in `.grad` for every leaf tensor |
+| **`grad`** | The accumulated gradient stored on a tensor with `requires_grad=True` |
+| **Forward pass** | Running data through the model to get a prediction |
+| **Backward pass** | Computing gradients of the loss with respect to every parameter |
+| **Loss function** | Number measuring how wrong the prediction is (e.g., `nn.CrossEntropyLoss`) |
+| **Optimizer** | Algorithm that updates weights using gradients (SGD, Adam, …) |
+| **`optimizer.zero_grad()`** | Reset gradients to zero before computing new ones (they accumulate by default) |
+| **`optimizer.step()`** | Apply the gradient update to every parameter |
+| **`model.train()` / `model.eval()`** | Switches dropout/BatchNorm into training or inference mode |
+| **`torch.no_grad()`** | Context that disables gradient tracking — saves memory during inference |
+| **`nn.Module`** | Base class for any PyTorch model — gives you parameter tracking, `to()`, save/load |
+| **`state_dict`** | Dictionary of all model weights — the recommended save format |
+| **DataLoader** | Iterator that batches, shuffles, and parallel-loads your data |
+| **Dataset** | Class with `__len__` and `__getitem__` describing how to fetch one sample |
+| **Batch** | A small group of samples processed together (e.g., 32 images at once) |
+| **Epoch** | One full pass through the training data |
+| **Mixed precision** | Training with `float16`/`bfloat16` to save memory and speed up GPUs |
+
+## Further reading
+- Next: [../02-training/01-backprop-gradient-descent.md](../02-training/01-backprop-gradient-descent.md) — what `loss.backward()` is doing under the hood
+- Architecture math: [../architectures-and-math.md](../architectures-and-math.md)
+- Official PyTorch docs: https://pytorch.org/docs/stable/index.html

@@ -5,6 +5,62 @@
 
 ---
 
+## In one sentence
+A **class** is a blueprint for making objects that bundle data with the actions you can do on it, and **exception handling** lets your code react gracefully when something goes wrong instead of crashing.
+
+## Real-world analogy
+A class is a cookie cutter; an object is a cookie. The cutter says "every cookie has these dimensions" — every object made from a `Customer` class has a `name` and `age`. Exception handling is like a fire drill: you write `try` for "do the risky thing," `except` for "if it catches fire, here's what to do," and `finally` for "in any case, lock the building when leaving."
+
+## The intuition (plain English)
+Use a class when you have **state and behavior bound together** — a thing with attributes (data) and methods (actions). The `__init__` method is the constructor; `self` is the current instance. **Inheritance** lets a child class reuse a parent's code. For pure data holders, prefer `@dataclass` over writing `__init__` manually. For errors, wrap risky code in `try`/`except` and **catch only specific exceptions** you can handle — bare `except` hides bugs.
+
+## Mini worked example
+A bank account with input validation:
+
+```python
+class BankAccount:
+    def __init__(self, owner, balance=0):
+        self.owner = owner          # instance attribute
+        self.balance = balance
+
+    def withdraw(self, amount):
+        if amount > self.balance:
+            raise ValueError(f"insufficient funds: {self.balance}")
+        self.balance -= amount
+
+acc = BankAccount("Peter", 1000)
+acc.withdraw(300)
+print(acc.balance)                  # 700
+
+try:
+    acc.withdraw(10_000)            # this will raise
+except ValueError as e:
+    print(f"error: {e}")            # error: insufficient funds: 700
+print("program continues")
+```
+
+The class bundles `owner` + `balance` + `withdraw`. The `try`/`except` catches the bad case so the program does not crash.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    Class[class BankAccount] -->|blueprint| O1[acc1: Peter, 1000]
+    Class -->|blueprint| O2[acc2: Tony, 500]
+    O1 -->|method call| W[withdraw 200]
+    W --> Check{amount > balance?}
+    Check -- yes --> E[raise ValueError]
+    Check -- no --> Update[balance -= amount]
+    E --> Try[try / except<br/>handles it]
+```
+
+## Why this matters
+- Real codebases organize logic into classes — pandas DataFrames, scikit-learn models, FastAPI apps are all classes.
+- `@dataclass` shows up in every modern Python project — internalize it now.
+- Without exception handling, one bad input crashes your whole pipeline; with it, you log and move on.
+
+---
+
 ## 1. Classes
 
 ### Why bother — when do I use a class?
@@ -294,3 +350,46 @@ except ValueError as e:
 - [ ] Why is catching `Exception` usually wrong?
 - [ ] What does `if __name__ == "__main__":` do?
 - [ ] Write a class `Product` with `name`, `price`, comparable by price, printable.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Class** | A blueprint for making objects |
+| **Object / instance** | A specific thing made from a class |
+| **OOP** (Object-Oriented Programming) | Style of organizing code around classes and objects |
+| **`__init__`** | The constructor — runs when you make a new object |
+| **`self`** | The current instance, always the first parameter of an instance method |
+| **Attribute** | A piece of data on an object: `acc.balance` |
+| **Method** | A function defined inside a class |
+| **Class attribute** | Shared by every instance of the class |
+| **Instance attribute** | Belongs to one specific object |
+| **`@dataclass`** | Decorator that auto-generates `__init__`, `__repr__`, and equality |
+| **Dunder method** | "Double-underscore" methods like `__init__`, `__add__`, `__len__` — implement Python's protocols |
+| **Operator overloading** | Defining `__add__`, `__lt__`, etc. so `+`, `<` work on your objects |
+| **`__repr__`** | Developer-friendly string shown in REPL or `repr(obj)` |
+| **`__str__`** | User-friendly string used by `print(obj)` |
+| **Inheritance** | A child class reuses fields and methods from a parent |
+| **`super()`** | Calls the parent's version of a method |
+| **Composition** | "Has-a" relationship — usually preferred over inheritance |
+| **Exception** | An error object raised when something goes wrong |
+| **`raise`** | Throw an exception |
+| **`try` / `except`** | Wrap risky code and handle errors |
+| **`else` (in try)** | Runs if no exception happened |
+| **`finally`** | Runs whether or not an exception happened — for cleanup |
+| **`ValueError`** | Right type, wrong value — `int("hello")` |
+| **`TypeError`** | Wrong type — `"a" + 1` |
+| **`KeyError`** | Missing dict key |
+| **`IndexError`** | List index out of range |
+| **`AttributeError`** | Object does not have that method/attribute |
+| **`raise ... from e`** | Re-raise while preserving the original traceback |
+| **`__main__` block** | Code that runs only when the file is executed directly, not on import |
+| **Context manager** | Object usable with `with` — `__enter__` and `__exit__` handle setup/teardown |
+
+## Further reading
+- Next: [06-numpy.md](06-numpy.md)
+- Decorators on classes/methods: [../03-advanced/02-json-generators-decorators.md](../03-advanced/02-json-generators-decorators.md)
+- Pydantic — modern data classes with validation: [../03-advanced/04-logging-pytest-pydantic-mysql.md](../03-advanced/04-logging-pytest-pydantic-mysql.md)
+- ML models are classes too: [../../06-machine-learning/01-foundations/02-linear-regression.md](../../06-machine-learning/01-foundations/02-linear-regression.md)

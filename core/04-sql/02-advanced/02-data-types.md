@@ -8,6 +8,70 @@
 
 ---
 
+## In one sentence
+A **data type** tells MySQL what kind of value lives in a column — number, text, date, JSON — and that single choice controls storage size, validation, and query speed.
+
+## Real-world analogy
+Picking column types is like choosing the right container in your kitchen: a small jar for spice, a wide tray for cookies, a sealed bottle for liquids. If you store milk in a colander or sugar in a glass, you'll regret it. Same here: pick `DECIMAL` for money, `VARCHAR` for names, `DATETIME` for timestamps — wrong container leads to silent bugs (rounding errors, truncation, slow queries).
+
+## The intuition (plain English)
+Every column you create has a type. Numbers come in flavors (`INT`, `BIGINT`, `DECIMAL`), strings come in flavors (`VARCHAR`, `TEXT`, `ENUM`), dates come in flavors (`DATE`, `DATETIME`, `TIMESTAMP`). Smaller types mean less disk space and faster index lookups; bigger types are safer but slower. Some choices have hidden traps: `FLOAT` for money quietly loses cents, `TIMESTAMP` overflows in 2038, `utf8` is broken for emoji. Learn the defaults that don't bite you, and you've handled 95% of schema design.
+
+## Mini worked example — picking types for an `orders` table
+
+You're storing customer orders. What goes in each column?
+
+```sql
+CREATE TABLE orders (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,   -- IDs: never go negative; auto-fill
+    customer_id INT UNSIGNED NOT NULL,                     -- foreign key
+    amount      DECIMAL(10, 2) NOT NULL,                   -- money: exact, never FLOAT
+    status      ENUM("pending", "shipped", "delivered") DEFAULT "pending",
+    notes       TEXT,                                       -- variable-length, can be long
+    placed_at   DATETIME DEFAULT CURRENT_TIMESTAMP          -- timestamp, no timezone surprise
+);
+```
+
+Sample data with the right types in action:
+
+```
+id | customer_id | amount  | status   | notes                  | placed_at
+---+-------------+---------+----------+------------------------+--------------------
+ 1 |          12 |   49.99 | shipped  | "leave at door"        | 2026-05-10 09:14:22
+ 2 |          12 |  100.00 | pending  | NULL                   | 2026-05-10 10:01:55
+ 3 |           7 | 1234.50 | delivered| "second floor, ring 3" | 2026-05-09 17:42:08
+```
+
+If `amount` had been `FLOAT`, summing 100 such rows could give `49.989999...` instead of `4999.00` — a real bug at scale.
+
+## At-a-glance — type picker cheat sheet
+
+```mermaid
+flowchart TB
+    Q[What are you storing?] --> N{Numeric?}
+    N -- yes --> N1{Money?}
+    N1 -- yes --> D[DECIMAL p, s]
+    N1 -- "no, count / id" --> I[INT UNSIGNED<br/>BIGINT if huge]
+    N1 -- "scientific" --> F[FLOAT or DOUBLE]
+    Q --> S{String?}
+    S -- short, bounded --> V[VARCHAR n]
+    S -- long, free-form --> T[TEXT]
+    S -- "fixed list of options" --> E[ENUM ...]
+    Q --> D2{Date / time?}
+    D2 -- date only --> DD[DATE]
+    D2 -- "wall clock" --> DT[DATETIME]
+    D2 -- "audit / utc" --> TS[TIMESTAMP]
+    Q -- semi-structured --> J[JSON]
+    Q -- coordinates --> G[POINT / GEOMETRY]
+```
+
+## Why this matters
+- Wrong type for money = wrong totals on dashboards. This bug has cost teams real money.
+- Right type means smaller indexes -> faster queries -> cheaper warehouse bills.
+- ML training data often comes from SQL — the type of each column determines whether you need encoding, casting, or scaling. See [../../06-machine-learning/01-foundations/05-preprocessing-encoding.md](../../06-machine-learning/01-foundations/05-preprocessing-encoding.md).
+
+---
+
 ## Why types matter
 
 Types affect:
@@ -214,3 +278,45 @@ For serious GIS, **PostGIS (PostgreSQL)** is the industry standard — but MySQL
 - [ ] How do I extract a JSON field as a usable string?
 - [ ] What's `AUTO_INCREMENT` and why is it useful?
 - [ ] How would you store a user's "preferred languages" — array, JSON, separate table?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Data type** | The "kind of value" a column holds: number, text, date, JSON, etc. |
+| **INT** | A 4-byte integer (about +/-2 billion). Default for IDs and counts |
+| **BIGINT** | An 8-byte integer for huge IDs or sums |
+| **TINYINT** | A 1-byte integer — often used for flags (0/1) |
+| **UNSIGNED** | "No negative values" — doubles the positive range |
+| **AUTO_INCREMENT** | MySQL fills in the next number for you when you don't specify one |
+| **DECIMAL(p, s)** | Exact-precision number with `p` total digits and `s` after the decimal point. Use for money |
+| **FLOAT / DOUBLE** | Approximate floating-point numbers. Fast, but they round — never use for money |
+| **CHAR(n)** | Fixed-length string of exactly `n` characters. Pads with spaces |
+| **VARCHAR(n)** | Variable-length string up to `n` characters |
+| **TEXT** | Long string, up to 64KB. Stored separately from the row |
+| **ENUM** | Column whose value must be from a fixed list (stored as a small int internally) |
+| **SET** | Like ENUM but allows multiple values (checkboxes) |
+| **BLOB** | Raw byte data — files, hashes. Prefer object storage for big binaries |
+| **DATE** | A calendar date: `YYYY-MM-DD` |
+| **TIME** | A time of day: `HH:MM:SS` |
+| **DATETIME** | Date and time, no timezone — stored as written |
+| **TIMESTAMP** | Stored in UTC, converted to session timezone on read. Limited to year 2038 |
+| **YEAR** | Just a year, 1 byte |
+| **JSON** | Native JSON column — typed, validated, queryable with `->` and `->>` |
+| **GEOMETRY / POINT** | Spatial types for coordinates, polygons, distance queries |
+| **utf8mb4** | The real 4-byte UTF-8 charset. Supports emoji. Always use this, never plain `utf8` |
+| **Collation** | The sort/compare rule for a charset (e.g., case-insensitive, accent-insensitive) |
+| **CHECK constraint** | A rule that rejects rows violating it: `CHECK (price >= 0)` |
+| **NOT NULL** | "Missing values are not allowed in this column" |
+| **DEFAULT** | The value used when an INSERT skips the column |
+| **CURRENT_TIMESTAMP** | A default value meaning "right now" |
+| **ON UPDATE CURRENT_TIMESTAMP** | Auto-updates a column to "now" every time the row changes — common for `updated_at` |
+| **Y2038 problem** | TIMESTAMP can't store dates past 2038-01-19 — DATETIME doesn't have this limit |
+
+## Further reading
+- Next: [03-keys-erd-normalization.md](03-keys-erd-normalization.md) — how to wire types into a schema
+- Then: [04-dml-statements.md](04-dml-statements.md) — INSERTing real values
+- ML feature prep: [../../06-machine-learning/01-foundations/05-preprocessing-encoding.md](../../06-machine-learning/01-foundations/05-preprocessing-encoding.md) — types determine which encoder you need
+- Pandas dtype mapping: [../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md](../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md) — `int64`, `float64`, `category`, `datetime64` mirror MySQL types

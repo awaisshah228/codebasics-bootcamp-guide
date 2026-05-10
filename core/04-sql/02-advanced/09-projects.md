@@ -1,5 +1,74 @@
 # Advanced 9 — SQL Projects
 
+---
+
+## In one sentence
+You build two portfolio-worthy projects on the AtliQ Hardware dataset — Project A wires up views/procedures/UDFs for finance reporting, Project B uses helper tables, triggers, and indexes to make a supply-chain dashboard fast.
+
+## Real-world analogy
+These are like the cooking-school finals: you've learned every technique, now you cook a real dish. Project A is "build the analyst toolkit a finance team uses every Monday morning." Project B is "make the supply-chain dashboard load in under a second when the manager opens it."
+
+## The intuition (plain English)
+By this point you know joins, CTEs, window functions, types, normalization, DML, views, procedures, UDFs, triggers, events, and indexes. The projects force you to **wire all of those together** on a real-shaped dataset. You won't invent new SQL — you'll combine what you know to deliver a small data product. Both projects come with a recommended deliverable list (views + procedures + UDFs + ERD + README). That's the same shape recruiters look for in a portfolio repo.
+
+## Mini worked example — what one deliverable looks like
+
+A snippet from Project A's "top customers per market" procedure, applied to a 5-row sample:
+
+```
+fact_sales_monthly                            dim_customer
+date       | customer_id | market | gross   id  | name           | discount_pct
+-----------+-------------+--------+------   ----+----------------+--------------
+2025-01-15 |          12 | India  | 1000     12 | Reliance Retail|         5.00
+2025-02-10 |          12 | India  | 2000     14 | Croma Stores   |         3.00
+2025-01-22 |          14 | India  |  800     21 | BestBuy LATAM  |         2.00
+2025-03-05 |          21 | LATAM  |  600
+2025-03-08 |          21 | LATAM  |  400
+```
+
+Calling the top-2 procedure for 2025:
+
+```sql
+CALL top_customers_per_market(2, 2025);
+```
+
+Returns the leaderboard per market, computed via window-function ranking on net sales:
+
+```
+market | customer_id | total_net_sales | rk
+-------+-------------+-----------------+---
+India  |          12 |         2850.00 |  1
+India  |          14 |          776.00 |  2
+LATAM  |          21 |          980.00 |  1
+```
+
+That's a deliverable. Six similar deliverables = a project.
+
+## At-a-glance — repo structure for either project
+
+```mermaid
+flowchart TB
+    Repo[finance-top-n/] --> SQL[sql/]
+    Repo --> Notebooks[notebooks/]
+    Repo --> Reports[reports/]
+    Repo --> Data[data/]
+    Repo --> ERD[ERD.png]
+    Repo --> README[README.md]
+    SQL --> Sch[01_schema.sql]
+    SQL --> V[02_views.sql]
+    SQL --> P[03_procedures.sql]
+    SQL --> F[04_functions.sql]
+    SQL --> I[05_indexes.sql]
+```
+
+## Why this matters
+- A finished project on GitHub beats any certificate — recruiters look for the README + ERD + sample CALLs.
+- Project A maps cleanly to "data analyst" roles in CPG / retail / finance.
+- Project B maps cleanly to "supply chain analyst" and "BI engineer" roles.
+- Both projects are the natural setup for the next module: feeding clean SQL outputs into [../../06-machine-learning/01-foundations/05-preprocessing-encoding.md](../../06-machine-learning/01-foundations/05-preprocessing-encoding.md) for predictive models.
+
+---
+
 ## Two projects in this module
 
 1. **Finance & Top-N Insights** — UDFs, stored procedures, views in a CPG / consumer-goods finance context
@@ -210,3 +279,44 @@ finance-top-n/
 - [ ] Both: do my READMEs include sample CALL / SELECT statements with output?
 - [ ] Both: posted on LinkedIn with screenshot and 3-bullet "what I learned"?
 - [ ] Both: ERD image included in the repo?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **AtliQ Hardware** | Codebasics' fictional consumer-goods company — the dataset both projects use |
+| **CPG** | Consumer Packaged Goods — the industry sector AtliQ models |
+| **Net sales** | Gross sales minus discounts: `gross * (1 - pct/100)` |
+| **Gross margin** | Net sales minus cost of goods, expressed as a percentage |
+| **Top-N per group** | "Top 5 customers per market" — uses window-function ranking inside a CTE |
+| **YoY (Year over Year)** | This year's metric vs last year's, often via `LAG()` window function |
+| **MoM (Month over Month)** | Same idea, monthly granularity |
+| **Forecast accuracy** | How well predicted demand matched actual sales |
+| **Net error** | `forecast - actual` (signed) — direction of bias |
+| **Absolute error** | `|forecast - actual|` — magnitude regardless of direction |
+| **Absolute error %** | Absolute error divided by actual, as a percentage |
+| **Helper table** | A pre-computed summary table used to speed up dashboard reads |
+| **Refresh strategy** | The plan for keeping a helper table in sync (trigger, scheduled event, or batch job) |
+| **EXPLAIN before/after** | Documenting the query plan before tuning and after — proves the index helped |
+| **Star schema** | The dim/fact layout these projects use (see [05-data-warehouse-etl.md](05-data-warehouse-etl.md)) |
+| **fact_sales_monthly** | Sample fact table used in Project A — one row per (customer, product, month) |
+| **fact_act_est** | Sample fact table used in Project B — actual + estimated demand by row |
+| **dim_customer / dim_product** | Dimension tables in AtliQ's star schema |
+| **UDF (User-Defined Function)** | A reusable formula like `net_sales(...)` |
+| **Stored procedure** | Multi-step SQL routine called via `CALL` |
+| **Surrogate key (sk)** | An artificial primary key per dimension version (used for SCD Type 2) |
+| **Snapshot column** | Column that records a value at the time of the fact event (e.g., price snapshot) |
+| **Index strategy** | Which columns get indexed, and why — documented with EXPLAIN evidence |
+| **Performance.md** | A short markdown file documenting before/after query timings |
+| **data_dictionary.md** | A file describing every column in every fact/dim table — the lightest catalog |
+| **LinkedIn post** | The recommended way to publicize your finished project for recruiters |
+
+## Further reading
+- Window-function patterns these projects rely on: [07-window-functions.md](07-window-functions.md)
+- Procedures and views: [06-functions-procedures-views.md](06-functions-procedures-views.md)
+- Performance tools: [08-triggers-events-indexes.md](08-triggers-events-indexes.md)
+- Schema design behind the data: [05-data-warehouse-etl.md](05-data-warehouse-etl.md) and [03-keys-erd-normalization.md](03-keys-erd-normalization.md)
+- Where the data goes next: [../../06-machine-learning/01-foundations/05-preprocessing-encoding.md](../../06-machine-learning/01-foundations/05-preprocessing-encoding.md) — feeding ML models from these views
+- Style guide: [../../../BEGINNER-STYLE-GUIDE.md](../../../BEGINNER-STYLE-GUIDE.md)

@@ -8,6 +8,52 @@
 
 ---
 
+## In one sentence
+**Deep learning** is teaching a computer to recognize patterns by stacking many simple "math neurons" into layers and letting them adjust themselves on lots of examples.
+
+## Real-world analogy
+A baby doesn't get a textbook on what a "cat" looks like — they see hundreds of cats and slowly build an internal sense of *cat-ness*. Deep learning is the same: feed a network thousands of cat photos, and its layers self-organize from "edges" → "fur patches" → "ears" → "cat".
+
+## The intuition (plain English)
+- A **neural network** is a stack of layers; each layer transforms numbers into more useful numbers.
+- The bottom layers learn **tiny features** (edges, color blobs); the top layers combine them into **big concepts** (a face, a sentence's meaning).
+- You don't write the rules — the network finds them by adjusting its internal "knobs" (weights) to reduce its error on examples you label for it.
+- "Deep" just means **many layers** stacked. More layers → more abstract patterns possible, but also more data and compute needed.
+
+## Mini worked example — image vs tabular
+Imagine two tasks:
+
+```
+Task A: predict house price from 5 columns (size, beds, location, age, garage)
+        → 5 neat numbers in, 1 number out → classical ML (XGBoost) wins
+
+Task B: classify "is this a cat?" from a 224×224 RGB photo
+        → 150,528 raw pixel numbers in → no human can write the rules
+        → deep learning (CNN) wins
+```
+
+Same goal — prediction — but *non-tabular, perceptual* data is where DL pulls ahead.
+
+## At-a-glance — picking an architecture
+
+```mermaid
+flowchart TB
+    A[What kind of data?] --> B{Type}
+    B -- Tabular rows --> M[MLP or XGBoost first]
+    B -- Images --> C[CNN / Vision Transformer]
+    B -- Text / sequences --> T[Transformer<br/>or LSTM for short sequences]
+    B -- Audio waveform --> CN[1D CNN or Conformer]
+    B -- Graphs / molecules --> G[Graph Neural Net]
+    B -- Generate new images --> D[Diffusion model]
+```
+
+## Why this matters
+- DL powers most modern AI you use: ChatGPT, Google Photos, voice assistants, self-driving features.
+- Knowing **when** to reach for DL (vs simpler ML) saves weeks of wasted effort.
+- Hardware choice (CPU vs GPU vs free Colab) determines whether your project finishes today or next week.
+
+---
+
 ## 1. What deep learning is
 
 Deep learning = neural networks with **multiple layers** that learn **hierarchical representations** of data.
@@ -154,3 +200,41 @@ Most bootcamp projects are **transfer-learning tasks** that fit on free Colab.
 - [ ] How much data do I need to fine-tune BERT vs train it from scratch?
 - [ ] What's transfer learning and why does it work?
 - [ ] Pick a task: car damage detection. Which architecture would you start with and why?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Deep learning (DL)** | Machine learning using neural networks with many layers |
+| **Neural network (NN)** | A stack of math layers loosely inspired by neurons; learns by adjusting weights |
+| **Layer** | One transformation step inside a network (e.g., a matrix multiply + activation) |
+| **Hierarchical features** | Lower layers learn simple patterns (edges); higher layers combine them into objects |
+| **Tabular data** | Data that fits neatly in rows and columns (like a spreadsheet) |
+| **Non-tabular data** | Images, audio, text, video — anything not naturally a table |
+| **Feature engineering** | Hand-crafting input columns. DL mostly skips this — it learns features itself. |
+| **Gradient descent** | The algorithm that nudges weights to reduce error |
+| **MLP** | Multi-Layer Perceptron — a basic feed-forward neural net |
+| **CNN** | Convolutional Neural Network — best for images |
+| **RNN / LSTM / GRU** | Older architectures for sequences (text, time series) |
+| **Transformer** | Modern architecture for sequences and beyond; powers GPT, BERT, ChatGPT |
+| **Autoencoder** | Network that compresses data then reconstructs it; used for denoising or anomaly detection |
+| **GAN** | Generative Adversarial Network — older image-generation method |
+| **Diffusion model** | Modern image/audio/video generator (Stable Diffusion, DALL-E) |
+| **GNN** | Graph Neural Network — for data shaped like a graph (molecules, social networks) |
+| **PyTorch** | Python deep-learning framework by Meta; the bootcamp's choice |
+| **TensorFlow / Keras** | Google's deep-learning framework; common in production |
+| **JAX** | Functional DL framework, fast on TPUs |
+| **GPU** | Graphics Processing Unit — massively parallel chip ideal for neural-net math |
+| **TPU** | Tensor Processing Unit — Google's custom chip for tensor operations |
+| **Colab** | Google's free cloud notebook with a free GPU — used throughout the bootcamp |
+| **Transfer learning** | Reusing a pre-trained model on your smaller task instead of training from scratch |
+| **Foundation model** | A huge pre-trained model (GPT, BERT) you adapt to many downstream tasks |
+| **Inference** | Running a trained model to make predictions (no learning happening) |
+| **OOM** | "Out of memory" — your batch is too big for the GPU |
+
+## Further reading
+- Next: [02-neuron-perceptron-mlp.md](02-neuron-perceptron-mlp.md) — what a single neuron does
+- Visual reference: [../architectures-and-math.md](../architectures-and-math.md) — diagrams + math for FFN and RNN
+- Where DL fits in the broader course: [../../06-machine-learning/README.md](../../06-machine-learning/README.md)

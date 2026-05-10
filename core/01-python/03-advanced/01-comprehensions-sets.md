@@ -5,6 +5,57 @@
 
 ---
 
+## In one sentence
+**Sets** dedupe and answer "is X in here?" in one step, **comprehensions** replace 4-line for-loops with 1-line expressions, **PEP 8** is the style every Python codebase agrees on, and **debuggers** beat `print` for finding real bugs.
+
+## Real-world analogy
+A set is a guest list — names are unique and you can check membership at the door instantly. A comprehension is the chef saying "give me the squared age of every adult in the room" in one sentence instead of writing a recipe. PEP 8 is the dress code so any Python developer feels at home in your file. A debugger is freezing time mid-scene so you can inspect every character before pressing play again.
+
+## The intuition (plain English)
+A `set` is unordered, holds **unique** values, and supports O(1) membership tests — perfect for "have I seen this before?" or set algebra (union, difference). A list comprehension `[x*x for x in nums if x > 0]` is the Pythonic shape of "transform + filter." Generator expressions use `()` and produce values lazily — great for big data. PEP 8 says `snake_case` for variables/functions, `PascalCase` for classes, `UPPER_SNAKE` for constants. Use `breakpoint()` to drop into a debugger anywhere.
+
+## Mini worked example
+Find unique words longer than 3 letters and their lengths in one read:
+
+```python
+sentence = "the quick brown fox jumps over the lazy dog"
+words = sentence.split()
+
+unique_words = set(words)                           # dedupe in one step
+print(len(words), len(unique_words))                # 9 8 — "the" appears twice
+
+# comprehension: filter + transform in one line
+long_lens = {w: len(w) for w in unique_words if len(w) > 3}
+print(long_lens)
+# {'quick': 5, 'brown': 5, 'jumps': 5, 'over': 4, 'lazy': 4}
+
+# generator expression — lazy, no list built in memory
+total_long_chars = sum(len(w) for w in unique_words if len(w) > 3)
+print(total_long_chars)                             # 23
+```
+
+Three Pythonic moves that would have been ~15 lines in a beginner style.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    Loop[for-loop + append] --> LC[List comprehension<br/>'value for var in iter if cond']
+    Loop --> DC[Dict comprehension<br/>'k: v for ...']
+    Loop --> SC[Set comprehension<br/>'expr for ...' with curly braces]
+    Loop --> GE[Generator expression<br/>'expr for ...' with parens — lazy]
+
+    Bug[print debugging] --> BP[breakpoint -- pdb<br/>n next, s step, c continue]
+    Bug --> IDE[IDE debugger<br/>visual breakpoints, watch panel]
+```
+
+## Why this matters
+- Comprehensions are the most-recognized Pythonic pattern — interviewers and reviewers expect them.
+- Sets eliminate whole classes of "did I already process this?" bugs.
+- A real debugger turns mystery crashes into 2-minute fixes once you know it.
+
+---
+
 ## 1. Sets
 
 ### What they are
@@ -246,3 +297,46 @@ pivoted = {k: [d[k] for d in records] for k in records[0]}
 - [ ] Name three PEP 8 conventions.
 - [ ] Set a breakpoint with `breakpoint()` and explain `n`, `c`, `p`.
 - [ ] Convert a list of dicts to a dict of lists in one comprehension.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Set** | Unordered collection of unique values, fast membership test |
+| **`frozenset`** | Immutable set — can be a dict key or set element |
+| **Hash-based** | Stored using a hash table — O(1) average lookup |
+| **Membership test** | `x in collection` — fast for sets and dicts |
+| **Union (`\|`)** | Items in either set |
+| **Intersection (`&`)** | Items in both sets |
+| **Difference (`-`)** | Items in left but not right |
+| **Symmetric difference (`^`)** | In one set or the other but not both |
+| **List comprehension** | `[expr for var in iterable if cond]` |
+| **Dict comprehension** | `{k: v for var in iterable}` |
+| **Set comprehension** | `{expr for var in iterable}` |
+| **Generator expression** | `(expr for var in iterable)` — produces values lazily |
+| **Lazy evaluation** | Compute values on demand, never holding the full result in memory |
+| **PEP 8** | Python's official style guide |
+| **`snake_case`** | Words separated by underscores — for variables and functions |
+| **`PascalCase`** | First letter of each word capitalized — for classes |
+| **`UPPER_SNAKE`** | All caps with underscores — for module-level constants |
+| **Leading underscore (`_x`)** | Convention for "internal use, do not touch" |
+| **Dunder (`__x__`)** | Reserved for Python's protocols (`__init__`, `__len__`) |
+| **Black** | Auto-formatter that reformats code to a single style |
+| **Ruff** | Fast linter that flags style and bug issues |
+| **isort** | Tool that orders import statements |
+| **Linter** | A tool that scans your code for problems |
+| **Formatter** | A tool that rewrites your code in a canonical style |
+| **Breakpoint** | A pause point where the debugger takes over |
+| **`pdb`** | Python's built-in command-line debugger |
+| **`breakpoint()`** | Built-in function that drops you into `pdb` |
+| **Step over (`n`)** | Run the current line, stop at the next |
+| **Step into (`s`)** | Step inside the function being called |
+| **Continue (`c`)** | Resume normal execution |
+| **Watch panel** | An IDE feature showing live values of chosen variables |
+
+## Further reading
+- Generators in depth: [02-json-generators-decorators.md](02-json-generators-decorators.md)
+- These patterns shine in pandas: [../01-basics/07-eda-pandas-matplotlib-seaborn.md](../01-basics/07-eda-pandas-matplotlib-seaborn.md)
+- Numpy vectorization is the array equivalent: [../01-basics/06-numpy.md](../01-basics/06-numpy.md)

@@ -9,6 +9,49 @@
 
 ---
 
+## In one sentence
+You install Python, create an isolated **virtual environment** for each project, and pick an editor (VS Code or PyCharm) so your code can run and your projects do not break each other.
+
+## Real-world analogy
+A virtual environment is like having a separate kitchen for each recipe. If one recipe needs a 2024 spice blend and another needs a 2018 spice blend, you do not mix them in one pantry — you keep two pantries side by side. That is exactly what `python -m venv` does for Python packages.
+
+## The intuition (plain English)
+Python is a language interpreter, plus thousands of installable libraries (pandas, NumPy, FastAPI). If you install everything globally, two projects will eventually fight over a library version and one will break. The fix is to **create a fresh folder per project**, install libraries inside it, and activate that folder before working. Editors like VS Code make this almost invisible. Notebooks (Jupyter) are where most data work happens — you write code in cells and see output below each cell.
+
+## Mini worked example
+A new project from zero on macOS or Linux:
+
+```bash
+mkdir my-first-project && cd my-first-project
+python3 -m venv .venv               # create the isolated kitchen
+source .venv/bin/activate           # step inside it
+which python                        # → .../my-first-project/.venv/bin/python
+pip install pandas                  # installs only inside .venv
+python -c "import pandas; print(pandas.__version__)"
+deactivate                          # step back out
+```
+
+Delete the `.venv` folder and the project is fully reset — no leftovers anywhere.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    A[Install Python 3.10+] --> B[Create venv<br/>python -m venv .venv]
+    B --> C[Activate it<br/>source .venv/bin/activate]
+    C --> D[Install packages<br/>pip install pandas numpy]
+    D --> E[Open editor<br/>VS Code or PyCharm]
+    E --> F[Write + run code]
+    F --> G[Stuck?<br/>read error → docs → Discord]
+```
+
+## Why this matters
+- Without a venv, pip installs leak into the system Python and eventually break it.
+- A clean install lets you follow Codebasics' code without "ModuleNotFoundError".
+- Knowing where your interpreter lives (`which python`) saves hours of debugging "wrong version" issues.
+
+---
+
 ## 1. Why Python (5-second version)
 
 Three reasons it dominates data work:
@@ -168,3 +211,33 @@ Mirroring the bootcamp's section structure makes it easy to find old work later.
 - [ ] I have JupyterLab or VS Code + Jupyter extension working
 - [ ] I've cloned the Codebasics public repo and run one of their notebooks
 - [ ] I know where to ask for help (Discord, docs, error message)
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Python interpreter** | The program (`python` or `python3`) that runs your `.py` files |
+| **PATH** | The list of folders the OS searches when you type a command — must include Python |
+| **pip** | Python's package installer — fetches libraries from PyPI |
+| **PyPI** | The public registry of Python packages, at pypi.org |
+| **Virtual environment (venv)** | An isolated folder with its own Python + packages, separate from system Python |
+| **Activate / deactivate** | Tells your shell to use the venv's Python (`source .venv/bin/activate`) and stop using it |
+| **Homebrew (`brew`)** | A package manager for macOS — `brew install python@3.12` |
+| **pyenv** | A tool for installing and switching between Python versions |
+| **conda / miniconda** | An alternative environment + package manager popular in data science |
+| **uv** | A fast modern replacement for `pip` and `venv`, written in Rust |
+| **IDE** (Integrated Development Environment) | An editor with code intelligence, debugger, and run buttons (PyCharm, VS Code) |
+| **VS Code** | Microsoft's free editor with a Python extension and Jupyter support |
+| **PyCharm** | JetBrains' Python IDE — the one used in Codebasics demos |
+| **Jupyter Notebook / JupyterLab** | A browser-based environment for writing code in cells with output below each |
+| **`.ipynb`** | The file extension for Jupyter notebooks |
+| **`requirements.txt`** | A plain-text list of packages and versions for a project |
+| **`nbstripout`** | A tool that wipes notebook outputs before commits — keeps git diffs small |
+| **REPL** | Read-Eval-Print Loop — the interactive `python` prompt where you type code and see results live |
+
+## Further reading
+- Next: [02-variables-numbers-strings.md](02-variables-numbers-strings.md)
+- Module overview: [../00-welcome-and-projects.md](../00-welcome-and-projects.md)
+- Style guide: [../../../BEGINNER-STYLE-GUIDE.md](../../../BEGINNER-STYLE-GUIDE.md)

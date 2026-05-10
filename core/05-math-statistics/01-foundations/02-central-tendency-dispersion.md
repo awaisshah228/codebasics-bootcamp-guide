@@ -10,6 +10,69 @@
 
 ---
 
+## In one sentence
+**Central tendency** is "where's the middle of my data?" and **dispersion** is "how spread out is it?" — together they're the smallest summary that tells you anything useful.
+
+## Real-world analogy
+Imagine two basketball teams that both average 80 points per game. Team A always scores between 78 and 82. Team B swings between 50 and 110. Their **central tendency** (average) is identical, but their **dispersion** (consistency) is wildly different. If you bet on a team's *minimum* score, you'd care way more about Team A. That difference — same middle, different spread — is what this chapter teaches you to measure.
+
+## The intuition (plain English)
+You'll always need to answer two questions about any number column:
+
+1. **Where's the typical value?** → Mean, Median, Mode
+2. **How much do values vary?** → Range, IQR, Variance, Std deviation
+3. (Bonus) **Do two columns move together?** → Correlation
+
+The "right" tool depends on whether your data is symmetric or skewed, and whether you have outliers. Pick wrong and your summary lies.
+
+## Mini worked example — when mean lies
+
+A startup of 5 people. Salaries:
+
+```
+[40k, 45k, 50k, 55k, 1,000k]   ← founder makes $1M
+                                    ↑ outlier!
+```
+
+| Metric | Value | What it says |
+|--------|-------|--------------|
+| Mean | 238k | "Avg salary at this startup is $238k" — technically true, totally misleading |
+| Median | 50k | "Half make above 50k, half below" — actually informative |
+| Std deviation | ~382k | Huge — flags the outlier |
+| IQR (Q3 − Q1) | 7.5k | Middle 50% is tightly clustered |
+
+When data has outliers or is skewed, **median + IQR** describe reality. **Mean + std dev** get hijacked by a single extreme value. This is why news outlets prefer "median household income" over "average household income."
+
+## Mini worked example — measuring spread
+
+Two classes of test scores, both averaging 75:
+
+```
+Class A:   [73, 74, 75, 76, 77]    →   mean = 75,  std dev ≈ 1.4
+Class B:   [50, 60, 75, 90, 100]   →   mean = 75,  std dev ≈ 18.0
+```
+
+Same average, **completely different teaching outcomes**. Std dev is the difference. A teacher reporting just "average" hides the second story.
+
+## At-a-glance — pick the right summary
+
+```mermaid
+flowchart TB
+    Start[Number column to summarize] --> Q{Skewed or has outliers?}
+    Q -- yes --> Sk[Use Median<br/>+ IQR<br/>+ Box plot]
+    Q -- no --> Sym[Use Mean<br/>+ Standard deviation]
+    Q -- categorical --> Cat[Use Mode<br/>+ Frequency table]
+    Sk --> Compare1[Compare groups → Box plots side-by-side]
+    Sym --> Compare2[Compare groups → Mean ± std]
+```
+
+## Why this matters in practice
+- **Backend monitoring**: latency uses **p95 / p99** (percentiles), not average — because the slow tail is where users churn.
+- **Finance**: stock risk = std dev of returns. Two stocks with the same average return have very different risks.
+- **ML preprocessing**: Decisions about outlier removal and feature scaling all depend on what you find in this chapter.
+
+---
+
 ## 1. Descriptive vs Inferential statistics
 
 | | Descriptive | Inferential |
@@ -263,3 +326,37 @@ df.cov()
 - [ ] Walk through interpreting a correlation matrix on a 5-variable dataset.
 - [ ] Give 2 examples of correlation that's NOT causation.
 - [ ] How would you outlier-treat a `salary` column with both real high earners and obvious typos?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Descriptive statistics** | Summarize the data you have ("our 1000 customers spend $42 on avg") |
+| **Inferential statistics** | Generalize from a sample to a larger population ("we're 95% confident average customer spend is between $39 and $45") |
+| **Mean** | Arithmetic average — sensitive to outliers |
+| **Median** | Middle value when sorted — robust to outliers |
+| **Mode** | Most frequent value — best for categorical data |
+| **Percentile** | The k-th percentile is the value below which k% of data falls |
+| **Quartile** | 25th, 50th, 75th percentiles (Q1, Q2/median, Q3) |
+| **P95 / P99** | 95th and 99th percentiles — used heavily in latency monitoring |
+| **Range** | max − min. Crude — one outlier ruins it. |
+| **IQR (Interquartile Range)** | Q3 − Q1 = width of the middle 50% of data. Robust outlier-resistant measure. |
+| **Variance** | Average squared distance from the mean. In *squared units*. |
+| **Standard deviation (σ, std)** | √variance. In *original units* — easier to interpret. |
+| **Bessel's correction** | Using `n-1` instead of `n` when computing sample variance, to make it an unbiased estimate |
+| **Box plot** | Picture showing median, IQR, and outlier candidates beyond 1.5 × IQR whiskers |
+| **Outlier** | A value extreme enough that it's likely an error or distinct phenomenon |
+| **Winsorize / cap** | Replace extreme values with the threshold instead of dropping them |
+| **Correlation** | A number from −1 to +1 showing how strongly two variables move together |
+| **Pearson correlation** | Measures *linear* relationship |
+| **Spearman correlation** | Measures *monotonic* (rank-based) relationship — robust to outliers and curves |
+| **Correlation ≠ causation** | Two variables moving together doesn't mean one causes the other (lurking third variable is common) |
+| **Lurking variable** | A hidden variable (like "season") explaining a spurious correlation between two others |
+| **Volatility** | In finance, std deviation of returns — the standard risk measure |
+
+## Further reading
+- Next: [03-probability-theory.md](03-probability-theory.md) — moves from describing data to reasoning about chance
+- Then: [04-distributions.md](04-distributions.md) — what shapes datasets actually have
+- Practical EDA workflow: [01-data-visualization-basics.md](01-data-visualization-basics.md)

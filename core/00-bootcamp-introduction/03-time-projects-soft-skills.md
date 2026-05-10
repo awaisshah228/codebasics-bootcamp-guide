@@ -10,6 +10,23 @@
 
 ---
 
+## In one sentence
+This part is the brutal-honesty math: roughly **570 hours** of total work, **15 portfolio projects**, and the soft skills that only develop because the bootcamp forces presentations and stakeholder feedback into every project.
+
+## Where the time actually goes
+
+```mermaid
+pie showData
+    title Where your 570 hours go
+    "Watching lectures" : 190
+    "Typing code (the real learning)" : 280
+    "Building 15 projects" : 100
+```
+
+The 30% / 70% rule from §1: lectures are recognition, code-typing is production. If you only watched lectures, you'd "know" everything and be unable to build anything.
+
+---
+
 ## 1. Quality over quantity
 
 **The trap**: watching 10 hours of lectures, then opening Netflix.
@@ -168,3 +185,33 @@ Filling these in is the point of this part:
 - [ ] Have I picked my weekly hours target and put it on a calendar?
 - [ ] Can I name the 13–15 projects without looking?
 - [ ] Do I know the refund window?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Recognition vs production** | Knowing it when you see it (passive) vs. being able to build it from scratch (active) |
+| **70/30 rule** | 30% lectures, 70% typing/practising code |
+| **Quality over quantity** | One deeply-built project beats five half-built ones |
+| **Star schema** | A database design with one fact table surrounded by dimension tables (taught in Hospitality EDA) |
+| **Fact / Dimension table** | Fact = transactions/measurements; Dimension = descriptive attributes (date, product, customer) |
+| **Streamlit** | Python library for building data apps with no front-end code |
+| **FastAPI** | Modern Python framework for building APIs quickly with auto-validation and docs |
+| **NBFC** | Non-Banking Financial Company — credit-risk project domain |
+| **KS Stat / Gini** | Credit-risk model evaluation metrics (related to ROC-AUC) |
+| **WOE / IV** | Weight of Evidence and Information Value — credit-scoring feature engineering technique |
+| **CNN** | Convolutional Neural Network — the architecture for image tasks |
+| **Transfer learning** | Reusing a pre-trained model and fine-tuning it on your smaller dataset |
+| **Chroma DB** | Open-source vector database used in the Real Estate RAG project |
+| **MCP** | Model Context Protocol — Anthropic's standard for connecting LLMs to tools and data |
+| **AgentCore** | Amazon Bedrock's framework for production AI agents |
+| **EMI** | Equated Monthly Installment — paying tuition in monthly chunks |
+| **Live webinar** | Real-time recorded session, included in the bootcamp price |
+| **Pay-the-difference protection** | If Codebasics adds modules later, you pay only the price delta |
+| **Story-telling with data** | Communicating analytical findings as a narrative, not a wall of charts |
+
+## Further reading
+- Next: [04-build-in-public-intro.md](04-build-in-public-intro.md)
+- Project list with file links: [README.md](README.md) under "Projects" section

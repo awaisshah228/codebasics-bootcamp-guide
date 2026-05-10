@@ -10,6 +10,72 @@
 
 ---
 
+## In one sentence
+You give SQL a recipe — *which table, filter, group, then sort* — and the engine returns the matching rows; learning this chapter is learning how to translate any business question into that recipe.
+
+## Real-world analogy
+Querying a single table is like asking a librarian: *"Pull all Bollywood movies released after 2010, sort by rating, and give me the top 5."* Each part of that sentence — pick the shelf, filter, sort, limit — has a SQL keyword that does exactly that.
+
+## The intuition (plain English)
+Every query is built from the same few moves: pick a table (`FROM`), filter rows (`WHERE`), bucket them (`GROUP BY`), filter the buckets (`HAVING`), choose what to show (`SELECT`), sort (`ORDER BY`), and trim (`LIMIT`). The trick is that you *write* the query starting with `SELECT`, but the engine *runs* the steps in a different order. Memorizing that order explains why some queries error out and others give surprises.
+
+## Mini worked example — top-rated Bollywood films
+
+Sample 5 rows from a `movies` table:
+
+```
+movie_id | title         | industry  | release_year | imdb_rating
+---------+---------------+-----------+--------------+------------
+       1 | Sholay        | Bollywood |         1975 |         8.5
+       2 | Bahubali 2    | Bollywood |         2017 |         8.2
+       3 | 3 Idiots      | Bollywood |         2009 |         8.4
+       4 | Dangal        | Bollywood |         2016 |         8.3
+       5 | The Godfather | Hollywood |         1972 |         9.2
+```
+
+Question: "Top 2 Bollywood movies after 2010, by rating."
+
+```sql
+SELECT title, imdb_rating
+FROM movies
+WHERE industry = "Bollywood"
+  AND release_year > 2010
+ORDER BY imdb_rating DESC
+LIMIT 2;
+```
+
+Result:
+
+```
+title     | imdb_rating
+----------+------------
+Dangal    |         8.3
+Bahubali 2|         8.2
+```
+
+The engine ran: `FROM movies` -> `WHERE industry='Bollywood' AND release_year>2010` -> `SELECT title, imdb_rating` -> `ORDER BY imdb_rating DESC` -> `LIMIT 2`.
+
+## At-a-glance — order of execution
+
+```mermaid
+flowchart TB
+    F[FROM<br/>pick the table] --> W[WHERE<br/>filter rows]
+    W --> G[GROUP BY<br/>bucket rows]
+    G --> H[HAVING<br/>filter buckets]
+    H --> S[SELECT<br/>pick / compute columns]
+    S --> O[ORDER BY<br/>sort]
+    O --> L[LIMIT<br/>trim]
+```
+
+You write `SELECT` first; the engine runs it 5th. That single fact explains 90% of beginner errors.
+
+## Why this matters
+- Every "data analyst" interview opens with single-table SQL — speed here is the floor for every later topic.
+- This is the **same translation skill** you'll reuse in pandas: `WHERE` becomes `df[...]`, `GROUP BY` becomes `groupby`, `ORDER BY` becomes `sort_values`.
+- Misreading "filter rows" vs "filter groups" (`WHERE` vs `HAVING`) is the most common live-coding error — drilling it now saves embarrassment later.
+
+---
+
 ## 1. The mental model — order of execution
 
 This is the single most useful thing to memorize:
@@ -274,3 +340,40 @@ Cinematic side-story; the takeaway: **read every business question twice before 
 - [ ] Write a query: average rating per industry, only industries with >3 movies, sorted descending.
 - [ ] Convert "Show me movies older than 20 years" into SQL using `YEAR(CURDATE())`.
 - [ ] How do I bucket ratings into "good / average / poor" with one SELECT?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **SELECT** | The keyword that picks which columns (or computed values) come back |
+| **FROM** | Names the source table |
+| **WHERE** | Filters individual rows before any grouping happens |
+| **GROUP BY** | Buckets rows that share a column value, so you can compute per-bucket stats |
+| **HAVING** | Filters the buckets *after* aggregation. Use this when you need `WHERE COUNT(*) > 5` |
+| **ORDER BY** | Sorts the result. `ASC` = ascending (default), `DESC` = descending |
+| **LIMIT** | Caps how many rows come back. Always pair with `ORDER BY` |
+| **OFFSET** | Skip the first N rows — used with LIMIT for pagination |
+| **DISTINCT** | Drops duplicate rows in the result |
+| **LIKE** | String pattern match. `%` = any chars, `_` = exactly one char |
+| **BETWEEN a AND b** | Inclusive range: `x BETWEEN 7 AND 9` matches 7, 8, 9 |
+| **IN (a, b, c)** | Set membership: shorthand for `x = a OR x = b OR x = c` |
+| **NULL** | "Unknown / missing." Compare with `IS NULL`, never `= NULL` |
+| **AS** | Renames a column or table in the result: `SELECT title AS movie_name` |
+| **Alias** | The new name given by `AS` (or implicitly) |
+| **Aggregate function** | A function that collapses many rows into one number: `COUNT`, `SUM`, `AVG`, `MIN`, `MAX` |
+| **COUNT(*)** | Counts all rows including those with NULLs |
+| **COUNT(col)** | Counts only rows where `col` is not NULL |
+| **CASE / WHEN** | An if/else inside SQL — turns one column into branches |
+| **IF(cond, a, b)** | Two-branch shortcut: returns `a` if `cond` is true, else `b` |
+| **Calculated column** | A column built from an expression, not stored on disk: `price * 1.10` |
+| **CURDATE()** | Today's date |
+| **CONCAT** | Glues strings together: `CONCAT(title, ' (', release_year, ')')` |
+| **Order of execution** | The order in which the engine runs clauses: FROM -> WHERE -> GROUP BY -> HAVING -> SELECT -> ORDER BY -> LIMIT |
+| **Cardinality** | How many distinct values a column has. High cardinality = many uniques |
+
+## Further reading
+- Next: [03-multiple-tables-joins.md](03-multiple-tables-joins.md) — combining tables
+- Pandas equivalent of WHERE/GROUP BY: [../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md](../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md)
+- ML use of these patterns: [../../06-machine-learning/01-foundations/05-preprocessing-encoding.md](../../06-machine-learning/01-foundations/05-preprocessing-encoding.md) — same filtering / bucketing logic on training data

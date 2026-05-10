@@ -5,6 +5,82 @@
 
 ---
 
+## In one sentence
+**Class imbalance** is when one class is rare (1% fraud, 5% defaults) — your model will happily predict "not rare" for everything and look 99% accurate while being useless, so you fight back with class weights, resampling (SMOTE), or threshold tuning.
+
+## Real-world analogy
+Imagine a security guard at an airport. 99.9% of bags are harmless; only 0.1% are dangerous. A guard who waves *every* bag through has a 99.9% accuracy rate — and zero usefulness. To do the actual job, you have to make the guard care more about catching the rare dangerous bag than about the boring 99.9%. That's exactly what class-weighting and SMOTE do for ML models.
+
+## The intuition (plain English)
+Three families of fixes — pick one or combine:
+
+1. **Algorithmic** — reweight the *loss* so a minority mistake costs more. One line of code: `class_weight="balanced"`.
+2. **Data-level** — change the *data* the model sees:
+   - Undersample the majority (toss data — fast, lossy).
+   - Oversample the minority (duplicate or synthesize — keeps data, but new data leakage risks if done wrong).
+   - **SMOTE** — generate synthetic minority points by interpolating between real ones.
+3. **Threshold-level** — train normally, then *lower the decision threshold* (from 0.5 to 0.2, say) so more cases get flagged.
+
+The right choice depends on data size, the imbalance ratio, and whether you can quantify the dollar cost of FN vs. FP.
+
+## Mini worked example — fraud detection on 10,000 transactions
+
+```
+not fraud: 9,900   (99%)
+fraud:        100   (1%)
+
+Naive logistic regression → predicts "not fraud" for all 10,000.
+Accuracy = 99%. Recall on fraud = 0%. Useless.
+```
+
+Apply `class_weight="balanced"`:
+```
+sklearn auto-weights:  not_fraud = 1.0,  fraud ≈ 49.5  (= 9900/200 / 99/2)
+The model is now 49.5× more "afraid" of missing a fraud than of false-flagging a non-fraud.
+Recall on fraud jumps from 0% to ~75%. Precision drops to ~30%.
+```
+
+Or use SMOTE:
+```
+After SMOTE: 9,900 not-fraud + 9,900 (real + synthetic) fraud = balanced.
+Train logistic regression as usual.
+Recall on fraud ~80%. Precision ~28%.
+```
+
+Or threshold tune:
+```
+Default threshold 0.5 → recall 0%, precision N/A
+Lower threshold to 0.05 → recall 70%, precision 35%
+Lower to 0.02 → recall 90%, precision 18%
+Pick threshold based on dollar cost (next: ROC-AUC chapter).
+```
+
+## At-a-glance — strategy decision
+
+```mermaid
+flowchart TB
+    Q[Imbalance detected] --> Q1{Imbalance ratio?}
+    Q1 -- "modest 70/30" --> CW["class_weight='balanced'<br/>often enough"]
+    Q1 -- "moderate 90/10" --> Combo[class_weight + threshold tuning<br/>or SMOTE inside pipeline]
+    Q1 -- "extreme 99/1+" --> Both[SMOTE + class_weight + threshold tuning<br/>+ PR-AUC for evaluation]
+    CW --> Eval[Evaluate with F1 / PR-AUC<br/>NEVER plain accuracy]
+    Combo --> Eval
+    Both --> Eval
+    Eval --> Test{Stratified k-fold?}
+    Test -- yes --> Done[Done]
+    Test -- no --> Fix[stratify=y everywhere]
+    Fix --> Done
+```
+
+## Why this matters
+- **Ignoring imbalance is the #1 silent ML failure.** "99% accuracy!" is meaningless if 99% of your data is the boring class.
+- **Always use stratified splits** (`stratify=y`, `StratifiedKFold`) so every fold has the same class ratio.
+- **SMOTE must go *inside* a pipeline**, applied only on training folds — otherwise you leak synthetic points into validation.
+- **Pair imbalance handling with the right metric** — F1, PR-AUC, recall@precision — never accuracy alone.
+- **Credit-risk and fraud projects** all hinge on this chapter.
+
+---
+
 ## 1. The problem
 
 Real datasets often have **skewed class distributions**:
@@ -205,3 +281,42 @@ print(scores.mean(), "±", scores.std())
 - [ ] When use threshold tuning vs SMOTE?
 - [ ] Why is PR-AUC often preferred over ROC-AUC for rare events?
 - [ ] What's `scale_pos_weight` in XGBoost?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Class imbalance** | One class is rare; predicting majority gives high accuracy but no useful signal |
+| **Imbalance ratio** | Ratio of majority to minority counts (e.g., 99:1) |
+| **Minority class** | The rarer class — usually the one you actually care about (fraud, defaults) |
+| **Majority class** | The common class — usually "negative" or "no event" |
+| **Class weight** | Per-class loss multiplier — minority gets higher weight |
+| **`class_weight="balanced"`** | sklearn auto-sets weights inversely proportional to class frequencies |
+| **`scale_pos_weight`** | XGBoost's class-weight equivalent — set to `n_neg / n_pos` |
+| **Resampling** | Changing the dataset's class proportions before training |
+| **Undersampling** | Drop majority-class rows until balanced — fast, lossy |
+| **Oversampling** | Duplicate or synthesize minority rows |
+| **Random oversampling** | Duplicate minority rows at random — risk of overfitting on duplicates |
+| **SMOTE** | Synthetic Minority Oversampling Technique — synthesizes new minority points by interpolating between real ones |
+| **BorderlineSMOTE** | SMOTE variant focused on minority points near the decision boundary |
+| **ADASYN** | Adaptive synthetic sampling — synthesizes more in hard regions |
+| **SMOTETomek** | Combined over+under-sampling — often the best balance |
+| **`imbalanced-learn` / `imblearn`** | Python library implementing SMOTE and friends |
+| **`ImbPipeline`** | imblearn's Pipeline that applies resampling only on `.fit`, not `.transform/.predict` |
+| **Stratified split** | Train/test split that preserves class proportions — `stratify=y` |
+| **StratifiedKFold** | Cross-validation that keeps each fold's class ratio consistent |
+| **Threshold tuning** | Lowering the probability cutoff (from 0.5 to e.g. 0.2) to trade precision for recall |
+| **Cost-sensitive learning** | Training/evaluating with explicit costs of FP vs FN (in dollars) |
+| **Anomaly detection** | Modeling the minority as "anomalies" via IsolationForest, OneClassSVM |
+| **Focal loss** | Loss function (originally from object detection) that down-weights easy examples |
+| **PR-AUC / Average Precision** | Area under precision-recall curve — preferred over ROC-AUC for rare events |
+| **ROC-AUC** | Area under ROC curve — can stay misleadingly high under extreme imbalance |
+| **Recall at fixed precision** | "What recall do we get when we hold precision at 90%?" — common business KPI |
+
+## Further reading
+- Previous: [05-decision-tree.md](05-decision-tree.md)
+- Next: [07-roc-auc.md](07-roc-auc.md) — threshold tuning and cost-benefit analysis
+- Boosting & `scale_pos_weight`: [../03-ensemble/02-boosting-adaboost-gbm-xgb.md](../03-ensemble/02-boosting-adaboost-gbm-xgb.md)
+- Credit-risk project: [../06-projects/02-credit-risk-classification.md](../06-projects/02-credit-risk-classification.md)

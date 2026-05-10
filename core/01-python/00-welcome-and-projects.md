@@ -6,6 +6,54 @@
 
 ---
 
+## In one sentence
+You will learn Python by building two real things — a hotel-revenue analysis notebook and a small fullstack expense-tracker app — instead of grinding through abstract syntax drills.
+
+## Real-world analogy
+Think of learning to cook. One way: memorize a list of 200 ingredients before touching a pan. Another way: pick two recipes (a stir-fry and a stew) and learn each ingredient when the recipe calls for it. Codebasics picks the second way — you meet `pandas.groupby` while answering a real hotel revenue question, not before.
+
+## The intuition (plain English)
+The module is **project-driven**, not topic-driven. Two real builds are previewed first so every later lecture has a place to land. Project 1 is a **read-only analysis** of hotel data (the "Data Analyst" mode). Project 2 is a **read-write app with a UI** for tracking expenses (the "Software Engineer who works with data" mode). Together they prove you can do both — exactly what entry-level data jobs ask for.
+
+## Mini worked example
+A typical Project 1 question and the kind of answer you produce:
+
+```
+Question:  Which city's hotels generate the most revenue?
+Code:      df.groupby("city")["revenue_realized"].sum().sort_values(ascending=False)
+
+Output:
+  Mumbai      24,500,000
+  Bangalore   18,200,000
+  Hyderabad   12,700,000
+  Delhi       10,900,000
+
+Insight (the actual deliverable):
+  "Mumbai drives 41% of total revenue from only 28% of bookings.
+   Protect this segment — it is the cash cow."
+```
+
+The code is one line. The **insight sentence** is the deliverable.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    Start[Start the module] --> P1[Project 1<br/>Hospitality EDA<br/>read-only analysis]
+    Start --> P2[Project 2<br/>Expense Tracker<br/>fullstack app]
+    P1 --> Skills1[pandas, matplotlib,<br/>seaborn, joins]
+    P2 --> Skills2[FastAPI, Streamlit,<br/>MySQL, pytest]
+    Skills1 --> Portfolio[Portfolio + LinkedIn<br/>posts + interview stories]
+    Skills2 --> Portfolio
+```
+
+## Why this matters
+- Recruiters hire on portfolios, not certificates — both projects become GitHub repos you can show.
+- Building first means every concept (groupby, joins, FastAPI routes) lands on a real use case.
+- The pair covers the two flavors of Python data work, so you stay flexible during job hunts.
+
+---
+
 ## What this section actually does
 
 It frames the module as **project-driven**, not topic-driven. Two real builds are previewed *before* you write a single line of Python — so when you later learn `pandas.groupby`, you already know which project you'll use it in.
@@ -119,3 +167,34 @@ Together they prove you can do both — which is exactly what entry-level data j
 - [ ] Can I summarize each project in 30 seconds?
 - [ ] Do I understand the *business* value of each, not just the tech?
 - [ ] Do I know which sections of this module map to which project?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **EDA** (Exploratory Data Analysis) | The first pass over a new dataset — look at shapes, missing values, distributions, relationships before any modeling |
+| **OLTP** (Online Transaction Processing) | The "running the business" database — many small writes (a booking, a sale) |
+| **OLAP** (Online Analytical Processing) | The "understanding the business" database — large analytical reads (revenue by city) |
+| **ETL** (Extract, Transform, Load) | The pipeline shape: pull data from sources, clean and reshape it, write to a warehouse |
+| **Fact table** | The events table — bookings, sales, clicks. Numbers you can sum live here. |
+| **Dimension table** | Context tables — hotels, products, dates. Adjectives that describe the events. |
+| **Star schema** | One fact table joined to flat dim tables — the standard analytics layout |
+| **CRUD** | Create, Read, Update, Delete — the four operations any storage system supports |
+| **FastAPI** | A Python web framework for building HTTP APIs quickly with auto-generated docs |
+| **Streamlit** | A Python library that turns scripts into web apps with no HTML/JS |
+| **MySQL** | A widely used open-source relational database |
+| **Pydantic** | A Python library that checks incoming data matches the shape you expect |
+| **pytest** | The standard Python testing framework — runs functions starting with `test_` |
+| **GM** (General Manager) | The non-technical decision-maker your insights are written for |
+| **Stakeholder** | The person who acts on your analysis — they read the conclusion, not the code |
+| **Insight** | A sentence connecting a number to a business decision (not just a number) |
+| **pandas** | Python's main library for working with tabular data (DataFrames) |
+| **matplotlib / seaborn** | Python's main charting libraries |
+
+## Further reading
+- Next: [01-basics/01-installation.md](01-basics/01-installation.md) — set up your tools
+- Project 1 deep-dive: [02-projects/01-hospitality-eda.md](02-projects/01-hospitality-eda.md)
+- Project 2 deep-dive: [02-projects/02-expense-tracker.md](02-projects/02-expense-tracker.md)
+- Style guide this file follows: [../../BEGINNER-STYLE-GUIDE.md](../../BEGINNER-STYLE-GUIDE.md)

@@ -6,6 +6,86 @@
 
 ---
 
+## In one sentence
+A **subquery** is a query nested inside another query, and a **CTE** is the same idea but named at the top so the outer query reads top-down like English instead of inside-out.
+
+## Real-world analogy
+Both let you answer multi-step questions in one shot. A subquery is like saying "give me the customers whose orders are bigger than (let me first find the average order...)" — the parentheses interrupt your sentence. A CTE is like writing on a sticky note first: *"avg_order = the average. Now, customers with orders bigger than avg_order."* Same answer; far easier to read.
+
+## The intuition (plain English)
+Some questions need an intermediate calculation before the final answer ("movies whose rating is above their industry's average"). You have two ways to write that: stuff the intermediate step in parentheses inside `WHERE` or `FROM` (a subquery), or name it with `WITH ... AS` and use it like a temporary table (a CTE). CTEs win on readability every time, support recursion (for hierarchies), and let you debug step-by-step. Use subqueries for one-liners; reach for CTEs the moment your query has two or more intermediate steps.
+
+## Mini worked example — movies above their industry average
+
+A 5-row `movies` table:
+
+```
+movie_id | title         | industry  | imdb_rating
+---------+---------------+-----------+------------
+       1 | Sholay        | Bollywood |         8.5
+       2 | 3 Idiots      | Bollywood |         8.4
+       3 | Race 3        | Bollywood |         5.0
+       4 | The Godfather | Hollywood |         9.2
+       5 | Cats          | Hollywood |         3.0
+```
+
+Industry averages: Bollywood = 7.3, Hollywood = 6.1. Question: "Which movies beat their industry average?"
+
+**Correlated subquery version:**
+
+```sql
+SELECT m.title, m.industry, m.imdb_rating
+FROM movies m
+WHERE m.imdb_rating > (
+    SELECT AVG(imdb_rating) FROM movies WHERE industry = m.industry
+);
+```
+
+**CTE version (cleaner):**
+
+```sql
+WITH industry_avg AS (
+    SELECT industry, AVG(imdb_rating) AS avg_r
+    FROM movies
+    GROUP BY industry
+)
+SELECT m.title, m.industry, m.imdb_rating
+FROM movies m
+JOIN industry_avg a USING (industry)
+WHERE m.imdb_rating > a.avg_r;
+```
+
+Result either way:
+
+```
+title         | industry  | imdb_rating
+--------------+-----------+------------
+Sholay        | Bollywood |         8.5
+3 Idiots      | Bollywood |         8.4
+The Godfather | Hollywood |         9.2
+```
+
+The CTE reads top-down: "first compute industry averages, then filter."
+
+## At-a-glance — when to use what
+
+```mermaid
+flowchart TB
+    Q[Need an intermediate step?] --> N{How many steps?}
+    N -- one tiny step --> S[Scalar subquery in WHERE/SELECT]
+    N -- "filter by a list" --> IN[IN / EXISTS subquery]
+    N -- "depends on outer row" --> C1[Correlated subquery<br/>slow on big data]
+    N -- "two or more steps" --> CTE[CTE with WITH]
+    N -- "tree / hierarchy" --> R[Recursive CTE]
+```
+
+## Why this matters
+- Top-N-per-group, "compared to group average," and rolling windows all start as subquery or CTE patterns.
+- Recursive CTEs are the standard tool for org charts, category trees, and date-range generators.
+- The CTE form maps directly to dbt models — when you graduate to a real warehouse, every model is essentially a named CTE.
+
+---
+
 ## 1. Subqueries — query inside a query
 
 ### Three positions
@@ -218,3 +298,37 @@ This needs window functions — covered in `07-window-functions.md`.
 - [ ] Write a CTE-based query for "products whose price exceeds their category's avg."
 - [ ] Write a recursive CTE that lists all descendants of employee #1.
 - [ ] When would you pick CTE over subquery?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Subquery** | A SELECT inside another SELECT — runs first and feeds its result to the outer query |
+| **Scalar subquery** | A subquery returning exactly one value (one row, one column) |
+| **Multi-value subquery** | A subquery returning a list of values, paired with `IN` or `NOT IN` |
+| **Derived table** | A subquery in the `FROM` clause — must have an alias |
+| **Correlated subquery** | A subquery that references the outer query's columns, runs once per outer row |
+| **EXISTS** | "Does this subquery return any row?" — short-circuits at first match, often faster than IN |
+| **NOT EXISTS** | "This subquery returns zero rows" — useful for "find unmatched" patterns |
+| **ANY (a.k.a. SOME)** | True if comparison holds for *at least one* value in a set |
+| **ALL** | True if comparison holds for *every* value in a set |
+| **CTE (Common Table Expression)** | A named subquery introduced with `WITH name AS (...)` |
+| **WITH** | The SQL keyword that starts a CTE block |
+| **Recursive CTE** | A CTE that references itself — used for trees and sequences |
+| **Anchor (in recursive CTE)** | The seed row(s) — the non-recursive part |
+| **Recursive part** | The half that joins the CTE to itself, generating the next level |
+| **cte_max_recursion_depth** | MySQL setting that caps recursion (default 1000) |
+| **Inlining** | When the engine substitutes a CTE's SQL at every reference rather than computing once |
+| **Top-N per group** | A common pattern: rank rows within a group, then keep the top N (often via window + CTE) |
+| **Pre-aggregation** | Computing summaries upfront in a CTE to avoid repeated full scans |
+| **Date sequence** | A generated list of dates (often via recursive CTE) for filling gaps in time series |
+| **Hierarchy traversal** | Walking parent -> child -> grandchild relationships, typically with a recursive CTE |
+| **Cost model** | How the engine estimates query expense — correlated subqueries are often the most expensive |
+
+## Further reading
+- Window functions (the natural next step): [07-window-functions.md](07-window-functions.md)
+- Pandas equivalent: [../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md](../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md) — chained `.groupby().transform()` is the pandas way to express "compared to group average"
+- ML data prep: [../../06-machine-learning/01-foundations/05-preprocessing-encoding.md](../../06-machine-learning/01-foundations/05-preprocessing-encoding.md) — feature engineering often relies on these patterns
+- Style guide: [../../../BEGINNER-STYLE-GUIDE.md](../../../BEGINNER-STYLE-GUIDE.md)

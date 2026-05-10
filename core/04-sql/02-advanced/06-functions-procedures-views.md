@@ -7,6 +7,98 @@
 
 ---
 
+## In one sentence
+**Views**, **functions**, and **stored procedures** all save SQL for reuse — a view is a saved query you SELECT from, a function returns one value per call, and a procedure is a multi-step routine you `CALL`.
+
+## Real-world analogy
+- A **view** is a pre-set "saved search" in your inbox: every time you click it, it re-runs the filter live and shows current matches.
+- A **function** is a single-button kitchen tool — you put one thing in, get one thing out (`movie_age(2010)` -> `16`).
+- A **stored procedure** is a recipe card with multiple steps — you `CALL` it and the whole sequence runs server-side.
+
+## The intuition (plain English)
+Once your queries get complex, you don't want analysts copy-pasting the same 30-line JOIN. You package it. **Views** give analysts a clean "table-like" object that hides the joins and filters. **Functions** are reusable formulas — define `net_sales(gross, discount_pct)` once, use it everywhere. **Procedures** wrap up multi-step logic (compute, then update, then log) so callers run one `CALL`. Each has its sweet spot, and modern teams use all three sparingly — most business logic now lives in app code or dbt models, but for pure-SQL warehouses these are the right tools.
+
+## Mini worked example — packaging "net sales" three ways
+
+A 3-row `sales` table:
+
+```
+id | gross_amount | discount_pct
+---+--------------+--------------
+ 1 |       100.00 |        10.00
+ 2 |       250.00 |         0.00
+ 3 |        80.00 |        20.00
+```
+
+**Function** — one line of formula, callable from anywhere:
+
+```sql
+DELIMITER $$
+CREATE FUNCTION net_sales(gross DECIMAL(10,2), pct DECIMAL(4,2))
+RETURNS DECIMAL(10,2) DETERMINISTIC NO SQL
+BEGIN
+    RETURN gross * (1 - pct / 100);
+END$$
+DELIMITER ;
+
+SELECT id, net_sales(gross_amount, discount_pct) AS net FROM sales;
+```
+
+Result:
+
+```
+id |    net
+---+-------
+ 1 |  90.00
+ 2 | 250.00
+ 3 |  64.00
+```
+
+**View** — saved SELECT analysts can re-query:
+
+```sql
+CREATE VIEW v_sales_with_net AS
+SELECT id, gross_amount, discount_pct,
+       net_sales(gross_amount, discount_pct) AS net_amount
+FROM sales;
+
+SELECT * FROM v_sales_with_net WHERE net_amount > 80;
+```
+
+**Procedure** — multi-step routine:
+
+```sql
+DELIMITER $$
+CREATE PROCEDURE refresh_sales_report(IN min_net DECIMAL(10,2))
+BEGIN
+    SELECT id, net_amount FROM v_sales_with_net WHERE net_amount > min_net;
+END$$
+DELIMITER ;
+
+CALL refresh_sales_report(80);
+```
+
+## At-a-glance — pick the right wrapper
+
+```mermaid
+flowchart TB
+    Q[What do you need?] --> A{Save a query<br/>for reuse?}
+    A -- yes --> V[VIEW<br/>analysts SELECT from it]
+    Q --> B{One value per row<br/>inside SELECT?}
+    B -- yes --> F[FUNCTION<br/>RETURNS scalar]
+    Q --> C{Multi-step routine<br/>called explicitly?}
+    C -- yes --> P[PROCEDURE<br/>called via CALL]
+    Q --> D{Run on schedule?}
+    D -- yes --> E[EVENT<br/>see next file]
+```
+
+## Why this matters
+- This is how warehouse teams expose clean "data products" to analysts without exposing raw tables.
+- Views are the security layer that lets you grant access to non-PII columns without touching the underlying table permissions.
+- Functions encapsulate formulas (net sales, BMI, fiscal week) so the same number is computed identically everywhere.
+
+---
+
 ## 1. Views — saved queries you can SELECT from
 
 A **view** is a stored `SELECT` statement that you can query like a table.
@@ -216,3 +308,36 @@ This is the kind of build that's portfolio-worthy and walks the line between SQL
 - [ ] What's `DETERMINISTIC` and why does it matter?
 - [ ] Write a function `discount(amount DECIMAL, pct DECIMAL)` that returns the post-discount amount.
 - [ ] Why doesn't MySQL have native materialized views, and how do teams emulate them?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **View** | A saved SELECT statement you can query like a table |
+| **Materialized view** | A view whose result is stored on disk and refreshed periodically. MySQL doesn't support natively — emulate with a summary table + scheduled INSERT |
+| **Stored procedure** | A named block of SQL with parameters, called with `CALL name(args)` |
+| **User-defined function (UDF)** | A function returning one value, usable inside SELECT |
+| **DELIMITER** | Temporarily change the statement terminator from `;` so multi-statement bodies parse correctly |
+| **CALL** | The keyword that invokes a stored procedure |
+| **IN parameter** | Read-only input to a procedure |
+| **OUT parameter** | A value the procedure writes back to the caller |
+| **INOUT parameter** | Both input and output |
+| **DETERMINISTIC** | "Same input always gives same output" — lets MySQL cache results safely |
+| **READS SQL DATA** | The function reads tables but doesn't write |
+| **MODIFIES SQL DATA** | The function or procedure changes tables |
+| **NO SQL** | The function uses no database tables — pure computation |
+| **CREATE OR REPLACE VIEW** | Replace an existing view's definition without dropping/recreating |
+| **SECURITY DEFINER / INVOKER** | Whether a procedure runs with the *creator's* or *caller's* privileges |
+| **Encapsulation** | Hiding implementation details behind a stable interface (the view name, the function name) |
+| **Permission control** | Granting `EXECUTE` on a procedure without granting raw table access |
+| **Top-N per group** | A common pattern: rank within a group, then keep the top N — usually wrapped in a procedure |
+| **YoY (Year over Year)** | A view that compares this year's measure to last year's — uses `LAG` window function |
+| **Fiscal week** | A custom week-numbering scheme — the kind of thing UDFs encode |
+
+## Further reading
+- Next: [07-window-functions.md](07-window-functions.md) — the engine behind top-N and rolling metrics
+- Then: [08-triggers-events-indexes.md](08-triggers-events-indexes.md) — automation and speed
+- Project applications: [09-projects.md](09-projects.md) — both projects build views + procedures
+- Style guide: [../../../BEGINNER-STYLE-GUIDE.md](../../../BEGINNER-STYLE-GUIDE.md)

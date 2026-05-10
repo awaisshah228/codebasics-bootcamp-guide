@@ -11,6 +11,90 @@
 
 ---
 
+## In one sentence
+The **Central Limit Theorem (CLT)** says that if you take many random samples from *any* population and average each one, those averages form a **bell-shaped (Normal) curve** — and that single fact is what lets us make confident predictions from small samples.
+
+## Real-world analogy
+You want to know the average height of every adult in India (1+ billion people). You can't measure all of them — but you measure a random group of 100. The CLT promises that if a thousand other people did the same thing independently, the *thousand averages* would cluster tightly around the true country-wide average in a beautiful bell curve. So your one number is far more trustworthy than it seems.
+
+## The intuition (plain English)
+- **Population** = everyone you care about (1 billion people).
+- **Sample** = the small group you actually measure (100 people).
+- **Sample mean** = the average from your one sample.
+- The CLT says: if you imagined repeating this many times, the **distribution of all those sample means** is approximately Normal — even if the population itself is wildly skewed.
+- Why it matters: you can now build a **confidence interval** around your one measurement and say "the true average is probably in this range".
+
+## Mini worked example — heights from a skewed population
+
+Imagine the population is *very* skewed (a few extremely tall outliers):
+
+```
+Population values:    [...lots of 60–72... + a few 90s ...]    
+Population mean:      66 inches  (skewed)
+Population std dev:   8 inches
+```
+
+You repeatedly take samples of 36 people and record the average:
+
+```
+Sample 1 mean:  66.4
+Sample 2 mean:  65.8
+Sample 3 mean:  66.1
+Sample 4 mean:  65.5
+Sample 5 mean:  66.7
+...
+(do this 1000 times)
+```
+
+The histogram of these 1000 means looks like this — **bell-shaped**, despite the skewed source:
+
+```
+                      ▁▂▄▆█▆▄▂▁
+                  ▁▁▂▃▆██████▆▃▂▁▁
+                ▁▂▄▆██████████████▆▄▂▁
+                  64    66    68
+                   centered at 66 — the population mean!
+                   with std dev = σ/√n = 8/6 ≈ 1.33
+```
+
+Two beautiful things happened:
+1. The distribution of sample means is **Normal** even though the population was skewed.
+2. The spread (called **standard error**) shrunk from 8 to 1.33 — getting more samples *averages out* the noise.
+
+## At-a-glance — the CLT machine
+
+```mermaid
+flowchart LR
+    Pop["Population<br/>(any shape, may be skewed)"] -->|take random sample of size n| S1["Sample 1<br/>mean = x̄₁"]
+    Pop -->|sample of n| S2["Sample 2<br/>mean = x̄₂"]
+    Pop -->|sample of n| S3["Sample 3<br/>mean = x̄₃"]
+    Pop -->|...repeat...| SN["Sample N<br/>mean = x̄ₙ"]
+    S1 --> Hist["Histogram of sample means<br/>→ Normal!<br/>centered at μ<br/>spread = σ/√n"]
+    S2 --> Hist
+    S3 --> Hist
+    SN --> Hist
+```
+
+## The two payoff numbers
+
+For the sampling distribution of the mean:
+
+| Quantity | What | Formula |
+|----------|------|---------|
+| **Center** | Where the bell sits | μ (population mean) |
+| **Spread** | How wide the bell is | σ / √n  ← called **Standard Error** |
+
+The square root in `σ/√n` has a brutal consequence: to halve your error, you need **4× the data**. To make it 10× more precise, **100× the data**. This is why "more data" has diminishing returns.
+
+## Why this matters
+- **Confidence intervals** ("the true mean is between A and B with 95% confidence") are built on the CLT.
+- **Hypothesis tests** (next chapter) compare the observed sample mean to the bell-curve of "expected if no effect".
+- **A/B testing** sample-size formulas come straight from this chapter.
+
+If the CLT didn't hold, every claim about a population from a sample would be guesswork. With it, statistics becomes a quantitative science.
+
+---
+
 ## 1. Random sampling — what makes a sample valid
 
 ### Random sample
@@ -252,3 +336,36 @@ ci = (mean - 1.96 * se, mean + 1.96 * se)        # (4.58, 4.82)
 - [ ] Compute a 95% CI for $\bar{x}=10$, $s=2$, $n=25$. (Use t.)
 - [ ] Why do skewed distributions need larger n for CLT to "kick in"?
 - [ ] What's stratified sampling and when do you use it?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Population** | The entire group you want to learn about (every customer, every voter) |
+| **Sample** | The smaller subset you actually measure |
+| **Random sample** | Each member of the population had equal chance of being picked |
+| **Selection bias** | Systematic flaw where some members couldn't be sampled (airport-only survey) |
+| **Non-response bias** | Skew because the people who *did* answer differ from those who didn't |
+| **Survivorship bias** | Studying only "winners" while ignoring the failures (most ML papers) |
+| **Stratified sampling** | Sample within subgroups proportional to their share, to keep balance |
+| **Cluster sampling** | Pick whole groups (cities) randomly, then sample within them |
+| **Law of Large Numbers (LLN)** | The bigger your sample, the closer your sample mean is to the population mean |
+| **Sampling distribution** | The distribution of a statistic (e.g., mean) across many imaginary samples |
+| **Central Limit Theorem (CLT)** | Sample means are approximately Normal as n grows, regardless of population shape |
+| **Standard error (SE)** | Standard deviation of the sampling distribution = σ / √n |
+| **Confidence interval (CI)** | A range of plausible values for a parameter (e.g., 95% CI) |
+| **95% CI** | If we ran this sampling-and-CI procedure many times, ~95% of the intervals would contain the true value |
+| **Z-distribution** | Standard Normal — used when σ is known or n is large |
+| **t-distribution** | Like Normal but with heavier tails — used when σ is estimated from a small sample |
+| **Degrees of freedom (df)** | Roughly: number of independent pieces of info; for one-sample t-test, df = n − 1 |
+| **Z-table** | Lookup table for cumulative probabilities under the Standard Normal |
+| **1.96** | The famous z-score for 95% two-sided confidence — appears in every CI formula |
+| **Margin of error** | Half the width of a CI: z × SE |
+| **Bootstrap** | Computer-based alternative to CLT — resample with replacement to estimate the sampling distribution directly |
+
+## Further reading
+- Next: [02-hypothesis-testing.md](02-hypothesis-testing.md) — using these foundations to make data-driven decisions
+- Visual review: [../01-foundations/04-distributions.md](../01-foundations/04-distributions.md)
+- Bootstrap (advanced alt): see Bradley Efron's classic paper or `scipy.stats.bootstrap`

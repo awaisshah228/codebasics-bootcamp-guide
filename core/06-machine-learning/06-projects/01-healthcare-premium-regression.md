@@ -11,6 +11,58 @@ A health insurer wants to predict the **annual premium** for a new applicant bas
 
 ---
 
+## In one sentence
+You build a model that, given a person's age, BMI, smoking status, region, and a few other facts, predicts what their annual health-insurance premium should be — and you ship a Streamlit demo that turns it into a small calculator.
+
+## Real-world analogy
+Insurance underwriters used to do this with intuition and lookup tables: "smoker plus age 50 plus BMI 32 → about $X". You're replacing that intuition with a model trained on thousands of past policies. Same job, more data-driven.
+
+## The intuition (plain English)
+1. Treat `premium_amount` as the number to predict (continuous → **regression**).
+2. Smoker status and BMI tend to dominate the price — you'll see this in EDA.
+3. Build a baseline (Ridge regression) so you have a number to beat. Then try XGBoost.
+4. Report **MAE in dollars** — stakeholders care about "we're off by $1,800 on average," not "R² = 0.84."
+5. Do **error analysis by subgroup** (smokers vs non, BMI buckets, region) — this is what separates a "C" project from a portfolio-worthy one.
+6. Deploy with Streamlit so anyone can drop in a profile and see a predicted premium.
+
+## Mini worked example — what one prediction looks like
+
+```
+input:    age=45, BMI=28, smoker=yes, region=NE, income=80k, children=2
+model:    XGBoost regressor (trained on 10,000 past policies)
+output:   predicted_premium = $14,320
+training MAE on similar profiles: $1,750  →  reasonable confidence interval ±$1,750
+```
+
+The Streamlit demo turns this into:
+```
+[ Age: 45 ▾ ]   [ BMI: 28.0 ]   [ Smoker: yes ▾ ]   ... [Estimate]
+        ── Estimated annual premium: $14,320 ──
+```
+
+## At-a-glance — full project flow
+
+```mermaid
+flowchart TB
+    EDA[1. EDA<br/>distributions, correlations] --> Clean[2. Clean<br/>NA, outliers]
+    Clean --> FE[3. Feature engineering<br/>BMI bucket, log target]
+    FE --> Pipe[4. Pipeline<br/>ColumnTransformer + model]
+    Pipe --> CV[5. Cross-validate<br/>Ridge vs XGBoost]
+    CV --> Tune[6. Tune XGBoost<br/>Optuna]
+    Tune --> Eval[7. Final evaluation<br/>MAE / RMSE / R² / MAPE]
+    Eval --> Err[8. Error analysis<br/>by subgroup]
+    Err --> Deploy[9. Streamlit deploy]
+    Deploy --> Repo[10. Repo + README]
+```
+
+## Why this matters
+- **A canonical regression project** — same recipe applies to demand forecasting, real-estate pricing, ad bidding.
+- **Turns the foundations files into a deliverable**: linear regression baseline, gradient boosting upgrade, regression metrics, residual diagnostics, all together.
+- **Portfolio-grade**: a Streamlit demo + a clear README with MAE in dollars beats 10 unfinished notebooks.
+- **Healthcare flavor** signals domain awareness — recruiters notice.
+
+---
+
 ## End-to-end walkthrough
 
 ### 1. EDA
@@ -164,3 +216,43 @@ healthcare-premium/
 - [ ] Does my README state MAE in dollars?
 - [ ] Is my model versioned (joblib + commit)?
 - [ ] Did I post a build-in-public update with demo link?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Premium** | The amount the policyholder pays for insurance coverage — the target we predict |
+| **Underwriting** | The insurer's process of pricing risk for a new applicant |
+| **BMI (Body Mass Index)** | Weight / height² — a standard health metric used as a feature |
+| **Right-skewed target** | Most premiums small, a few very large — common; consider log transform |
+| **Log transform** | Replace y with `log(y+1)` to make the distribution more symmetric, then `exp` predictions back |
+| **One-hot encoding** | Turn categorical strings (region, gender) into 0/1 columns |
+| **ColumnTransformer** | sklearn class applying different preprocessors to different columns |
+| **Pipeline** | Chains preprocessing + model so CV is leak-free |
+| **Ridge regression** | Linear regression with L2 regularization — strong baseline |
+| **XGBoost** | Gradient-boosted trees — top tabular-regression performer |
+| **MAE (Mean Absolute Error)** | Average dollar error — the metric stakeholders read |
+| **RMSE (Root Mean Squared Error)** | Penalizes big misses harder than MAE |
+| **R²** | Fraction of variance explained — summary metric |
+| **MAPE (Mean Absolute Percentage Error)** | Percentage error — easy to communicate, breaks for tiny y |
+| **Cross-validation (CV)** | Average score across multiple train/val splits — more honest than one split |
+| **Optuna** | Bayesian hyperparameter tuner — finds great configs in fewer trials than grid search |
+| **Hyperparameter** | Model knob set before training (depth, learning_rate) |
+| **Held-out test set** | Final, never-touched data used once for the honest report |
+| **Error analysis** | Slicing residuals by subgroup to find where the model is worst |
+| **Subgroup performance** | MAE by smoker / BMI bucket / region — exposes model bias |
+| **Residual** | `actual − predicted` per row |
+| **Model card** | Short document describing what the model does, its data, and its known limits |
+| **Streamlit** | Python library to build a web demo from a script in minutes |
+| **`joblib.dump`** | Saves a trained sklearn / XGBoost model to disk |
+| **Streamlit Cloud** | Free hosting for Streamlit apps — deploy a demo URL in 5 minutes |
+| **Build-in-public** | Sharing project progress on LinkedIn / Twitter while building — boosts portfolio reach |
+| **Repo deliverables** | The files a hiring manager expects: notebooks, src, model, requirements, README |
+
+## Further reading
+- Foundations: [../01-foundations/02-linear-regression.md](../01-foundations/02-linear-regression.md), [04-model-evaluation-regression.md](../01-foundations/04-model-evaluation-regression.md), [07-regularization.md](../01-foundations/07-regularization.md)
+- Boosting: [../03-ensemble/02-boosting-adaboost-gbm-xgb.md](../03-ensemble/02-boosting-adaboost-gbm-xgb.md)
+- Tuning: [../03-ensemble/03-cross-validation-tuning.md](../03-ensemble/03-cross-validation-tuning.md)
+- Companion classification project: [02-credit-risk-classification.md](02-credit-risk-classification.md)

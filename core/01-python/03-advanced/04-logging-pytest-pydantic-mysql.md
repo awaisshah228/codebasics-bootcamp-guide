@@ -5,6 +5,75 @@
 
 ---
 
+## In one sentence
+**Logging** records what your app did, **pytest** checks your code still works after every change, **Pydantic** validates incoming data, and **MySQL** stores rows safely on disk — together they turn a script into a reliable application.
+
+## Real-world analogy
+Logging is the security camera in a shop — you only watch the footage when something looks off, but you are glad it was recording. Pytest is the daily QA inspection — every product on the shelf is checked before it reaches a customer. Pydantic is the bouncer at the door — wrong ID, you do not get in. MySQL is the locked filing cabinet that survives power cuts and resets.
+
+## The intuition (plain English)
+Replace `print` with `logging` so you can filter by level, redirect to files, and attach timestamps. Use **pytest** with files starting with `test_` and functions starting with `test_`; `pytest.fixture` provides setup data. **Pydantic** models declare types and constraints (`age: int = Field(ge=0, le=150)`) and reject bad inputs with helpful messages. For MySQL, **always** use parameterized queries (`%s`) — never f-strings — to prevent SQL injection, and remember `conn.commit()` after writes.
+
+## Mini worked example
+A tiny pipeline that hits all four:
+
+```python
+# 1. Pydantic — validate input
+from pydantic import BaseModel, Field
+class Expense(BaseModel):
+    amount: float = Field(gt=0)
+    category: str
+
+# 2. logging — record events
+import logging
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger(__name__)
+
+# 3. MySQL — parameterized insert
+import mysql.connector
+def save_expense(exp: Expense):
+    conn = mysql.connector.connect(host="localhost", user="app",
+                                   password="secret", database="expenses")
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO expenses (amount, category) VALUES (%s, %s)",
+        (exp.amount, exp.category),                # tuple — never f-strings!
+    )
+    conn.commit(); cur.close(); conn.close()
+    log.info(f"saved expense {exp}")
+
+# 4. pytest — test the pipeline
+def test_expense_rejects_negative():
+    import pytest
+    with pytest.raises(ValueError):
+        Expense(amount=-5, category="Food")
+```
+
+Validation, logging, safe SQL, automated test — all four habits in one screen.
+
+## At-a-glance
+
+```mermaid
+flowchart LR
+    Input[user data] --> P[Pydantic<br/>validate + coerce types]
+    P -- bad --> R[reject with clear error]
+    P -- good --> Code[your function]
+    Code --> Log[logging<br/>info / warning / exception]
+    Code --> SQL[parameterized query<br/>%s + commit]
+    SQL --> DB[(MySQL)]
+    Code --> T[pytest<br/>auto-discovers test_*.py]
+    T --> Confidence[refactor without fear]
+```
+
+## Why this matters
+- A `print`-only app is impossible to debug in production — proper logs save you at 2 AM.
+- Without tests, every change is gambling; with tests, refactoring is fearless.
+- One missing parameterization can leak a whole user database — Pydantic + parameterized SQL closes that gap.
+- These four habits separate "scripts that ran once" from "code I would put on my resume."
+
+---
+
 ## 1. Logging
 
 ### Why not `print`
@@ -340,3 +409,49 @@ Reads from environment vars + `.env` file. Replace ad-hoc `os.getenv` calls.
 - [ ] How do I get a coverage report?
 - [ ] What's the safe way to store DB credentials for an app?
 - [ ] Write a function that inserts a row and commits, with proper try/finally.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Logging** | Writing structured runtime messages to a file or stream |
+| **Log level** | Severity tier — DEBUG, INFO, WARNING, ERROR, CRITICAL |
+| **`getLogger(__name__)`** | Standard pattern for one logger per module |
+| **Handler** | Where logs go — `FileHandler`, `StreamHandler` |
+| **Formatter** | How each log line looks (timestamp, level, message) |
+| **`log.exception`** | Like `log.error` but appends the traceback automatically |
+| **JSON logs** | Logs serialized as JSON so aggregators can parse them |
+| **Trace ID / request ID** | Identifier carried across services to correlate logs |
+| **PII** (Personally Identifiable Information) | Sensitive user data — never log it |
+| **pytest** | Standard Python test framework with auto-discovery |
+| **`assert`** | Statement that raises `AssertionError` if the expression is false |
+| **`pytest.raises`** | Context that asserts an exception is raised |
+| **Fixture** | Pytest function providing setup data via dependency injection |
+| **`parametrize`** | Decorator that runs the same test with multiple input sets |
+| **Mock** | Stand-in object replacing real services during a test |
+| **`unittest.mock.patch`** | Replace a name with a mock for the duration of a test |
+| **Coverage** | % of code lines executed by tests — measured by `pytest-cov` |
+| **MySQL** | A widely used open-source relational database |
+| **MySQL Workbench / DBeaver** | GUI clients for inspecting and querying MySQL |
+| **`mysql.connector`** | Oracle's official Python driver for MySQL |
+| **`pymysql`** | Pure-Python MySQL driver alternative |
+| **Cursor** | Object you use to send SQL and fetch rows |
+| **`commit`** | Persist pending writes — without it, INSERTs are not saved |
+| **Parameterized query** | SQL with `%s` placeholders — driver escapes input safely |
+| **SQL injection** | Attack where untrusted input becomes SQL — defeated by parameterized queries |
+| **SQLAlchemy** | Higher-level Python toolkit: query builder + ORM |
+| **ORM** (Object-Relational Mapper) | Lets you treat DB rows as Python objects |
+| **Pydantic** | Library that validates data against typed models |
+| **`BaseModel`** | The class you inherit from to define a Pydantic model |
+| **`Field(...)`** | Adds constraints (`gt`, `ge`, `le`, `min_length`) |
+| **`field_validator`** | Custom validation logic for one field |
+| **`EmailStr`** | Pydantic type that validates email format |
+| **`pydantic_settings.BaseSettings`** | Loads config from env vars / `.env` |
+| **CI** (Continuous Integration) | Automated test runs on every commit |
+
+## Further reading
+- The expense tracker uses every concept here: [../02-projects/02-expense-tracker.md](../02-projects/02-expense-tracker.md)
+- APIs that wrap the DB: [03-apis-fastapi.md](03-apis-fastapi.md)
+- ML monitoring builds on logging: [../../06-machine-learning/05-lifecycle-mlops/README.md](../../06-machine-learning/05-lifecycle-mlops/README.md)

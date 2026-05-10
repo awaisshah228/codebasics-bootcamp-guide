@@ -8,6 +8,66 @@
 
 ---
 
+## In one sentence
+**Logistic regression** is linear regression's cousin for yes/no questions — it computes a weighted sum of features then squashes it into a probability between 0 and 1.
+
+## Real-world analogy
+A bouncer at a club assigns each guest a "vibe score" by quickly summing things like age, attire, mood (each weighted by experience). Then she runs that score through a quick mental rule: very low score → definitely no; very high → definitely yes; middling → flip a coin (50%). The squashing step is **the sigmoid function**. The weights come from past data — guests she let in who turned out fine, vs. those she shouldn't have.
+
+## The intuition (plain English)
+1. Compute `z = β₀ + β₁·age + β₂·income + …` — a regular linear combination.
+2. Pass z through the **sigmoid** `σ(z) = 1 / (1 + e^(−z))`. This turns any real number into a probability in (0, 1).
+3. Predict class 1 if probability ≥ 0.5, else class 0. Adjust the threshold for cost-sensitive problems (fraud, cancer).
+4. Train by minimizing **log loss** — the cost that punishes confident wrong predictions hardest.
+
+Despite the name "regression," it's a **classifier**. The "regression" refers to the linear `z` step.
+
+## Mini worked example — predicting customer churn
+
+You have a fitted model: `z = −3 + 0.05·tenure_days − 0.6·support_calls`. For three customers:
+
+```
+                         tenure   calls    z              σ(z) = P(churn)   predict
+Anna  (loyal)              900      1     -3 + 45 - 0.6 = 41.4         ≈ 1.0           churn? YES
+Ben   (new, no issues)      30      0     -3 + 1.5 - 0  = -1.5         ≈ 0.18          churn? NO
+Cara  (frustrated)         180      8     -3 + 9 - 4.8  =  1.2         ≈ 0.77          churn? YES
+```
+
+Wait — Anna has tenure 900 and *will* churn? Sign of β₁ is positive, so longer tenure = more likely to churn in this fictional fit. Coefficients tell you directionality once you trust the model — and you'd verify against domain knowledge.
+
+How log loss penalizes:
+- Anna: actual = 1, predicted prob = 1.0 → log loss ≈ 0 (great)
+- Cara: actual = 1, predicted prob = 0.77 → log loss = −log(0.77) ≈ 0.26 (mild)
+- A confidently-wrong prediction (actual=1, predicted=0.05) → −log(0.05) ≈ 3.0 (heavy penalty)
+
+That asymmetry is why log loss is the right cost for classification.
+
+## At-a-glance — the model
+
+```
+                      sigmoid               threshold
+features ─► Σ(β·x) ─► σ(z) ─► probability ─► 0 or 1
+   x          z       1/(1+e⁻ᶻ)              (default 0.5)
+
+Output of sigmoid:
+            1 ─┤              ───
+              │           ──/
+            0.5┤        ──/
+              │     ──/
+            0 ─┤────/
+              └───────────────► z
+              -inf       0       +inf
+```
+
+## Why this matters
+- **The most-used classifier in industry.** Banks, hospitals, marketing — anywhere you need an interpretable yes/no model.
+- **Outputs probabilities, not just labels.** Lets you set business-driven thresholds and rank cases.
+- **Coefficients are interpretable** as log-odds — `e^β` is the odds ratio. Compliance teams love this.
+- **Foundation of neural networks.** A single neuron with sigmoid activation *is* logistic regression.
+- **Credit-risk project** uses it as the regulator-friendly baseline.
+
+---
+
 ## 1. Why not linear regression for classification
 
 If you fit a line to predict 0/1, predictions can be < 0 or > 1 — not probabilities. Decision boundary moves around with extreme x's. Linear regression isn't designed for it.
@@ -196,3 +256,43 @@ print("AUC:", roc_auc_score(y_test, y_prob))
 - [ ] What does `class_weight="balanced"` do?
 - [ ] When would you shift the decision threshold below 0.5?
 - [ ] Name 3 reasons to choose logistic regression over a random forest.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Classification** | Predicting a category (spam/not, default/not, malignant/benign) |
+| **Binary classification** | Just two classes |
+| **Multiclass classification** | Three or more mutually exclusive classes |
+| **Logistic regression** | Linear regression's coefficients passed through a sigmoid → probability |
+| **Sigmoid function** | `σ(z) = 1/(1 + e⁻ᶻ)` — squashes any real number into (0, 1) |
+| **Logit** | The reverse: `z = log(p / (1−p))` — the linear combination before squashing |
+| **Probability output** | What `predict_proba` returns — a number in (0, 1) per class |
+| **Decision threshold** | Cutoff for converting probability to a class label (default 0.5) |
+| **Log loss / cross-entropy** | The classification cost function — punishes confident wrong predictions heavily |
+| **Odds** | `p / (1 − p)` — "for every loss, how many wins?" |
+| **Odds ratio** | `e^β` — how odds are multiplied per 1-unit increase in feature |
+| **Softmax** | Multiclass generalization of sigmoid — turns k logits into k probabilities summing to 1 |
+| **One-vs-Rest (OvR / OvA)** | Multiclass strategy: train k binary "this class vs everyone else" models |
+| **Multinomial / Softmax regression** | The "real" multiclass logistic regression — single model, k outputs |
+| **Class weight** | Multiplier on each class's loss term — used for imbalanced classes |
+| **`class_weight="balanced"`** | sklearn auto-sets weights inversely proportional to class frequencies |
+| **Stratified split** | Train/test split that preserves class proportions — use `stratify=y` |
+| **`predict()`** | Returns the predicted class label (after applying threshold) |
+| **`predict_proba()`** | Returns the predicted probability for each class |
+| **Calibration** | How well predicted probabilities match real-world frequencies |
+| **C (in sklearn)** | Inverse of regularization strength: `C = 1/λ` — bigger C = less regularization |
+| **L1 penalty** | Lasso-style regularization — produces sparse coefficients |
+| **L2 penalty** | Ridge-style regularization — shrinks all coefficients smoothly |
+| **`solver`** | Optimization algorithm sklearn uses (`lbfgs`, `liblinear`, `saga`) — different solvers support different penalties |
+| **TF-IDF** | Term-frequency / inverse document frequency — turns text into sparse numeric features that logistic regression handles well |
+
+## Further reading
+- Previous: [../01-foundations/07-regularization.md](../01-foundations/07-regularization.md) — same L1/L2 ideas applied here
+- Next: [02-classification-metrics.md](02-classification-metrics.md) — judging classifiers
+- Class imbalance handling: [06-class-imbalance.md](06-class-imbalance.md)
+- Threshold tuning: [07-roc-auc.md](07-roc-auc.md)
+- Credit-risk project: [../06-projects/02-credit-risk-classification.md](../06-projects/02-credit-risk-classification.md)
+- Math foundation — odds & log-odds: [../../05-math-statistics/01-foundations/04-distributions.md](../../05-math-statistics/01-foundations/04-distributions.md)

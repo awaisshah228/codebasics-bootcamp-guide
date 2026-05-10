@@ -7,6 +7,80 @@
 
 ---
 
+## In one sentence
+**Transfer learning** is starting from a model that already learned to "see" on millions of images (ImageNet), then teaching it your specific task with just a few thousand examples — getting near state-of-the-art accuracy in an afternoon.
+
+## Real-world analogy
+Hiring a chef vs hiring someone off the street to cook a new dish. The chef already knows knife skills, heat control, and seasoning — you just teach them this *specific* recipe. A pre-trained CNN is the chef: it already knows edges, textures, and shapes, you just teach it the new categories.
+
+## The intuition (plain English)
+- A network pre-trained on ImageNet has already learned reusable visual concepts in its early/middle layers.
+- **Feature extraction**: freeze the pre-trained backbone, train only a new final layer on your classes — fast, works with very little data.
+- **Fine-tuning**: also unfreeze deeper layers and train them at a *much smaller* learning rate so you don't wreck the pre-trained knowledge.
+- A common winning recipe is **two phases**: feature-extract for a few epochs, then fine-tune the whole network at a tiny LR.
+
+## Mini worked example — adapting ResNet-50 to 4 classes (car damage)
+
+```python
+from torchvision import models
+import torch.nn as nn
+
+# 1. Load weights pre-trained on ImageNet (1000 classes)
+model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
+
+# 2. The original network's last layer:  nn.Linear(2048, 1000)
+print(model.fc)            # Linear(in_features=2048, out_features=1000, ...)
+
+# 3. Replace it with a new head for OUR 4 classes:
+model.fc = nn.Linear(model.fc.in_features, 4)
+
+# 4. Phase 1 — freeze the backbone, train only model.fc
+for p in model.parameters():
+    p.requires_grad = False
+for p in model.fc.parameters():
+    p.requires_grad = True
+# train for ~5 epochs at lr=1e-3
+
+# 5. Phase 2 — unfreeze everything, fine-tune at a tiny LR
+for p in model.parameters():
+    p.requires_grad = True
+# train for ~15 more epochs at lr=1e-5
+```
+
+Net effect: a 25M-parameter model that already "sees" gets specialized to your 4 classes with maybe 1,000 labeled images per class.
+
+## At-a-glance — choosing your transfer-learning recipe
+
+```mermaid
+flowchart TB
+    A[How much labeled data?] --> B{Amount}
+    B -- "very small <500 per class" --> FE[Feature extraction only<br/>freeze backbone, train head]
+    B -- "small to medium 500-5000 per class" --> TP[Two-phase: head first,<br/>then fine-tune all at tiny LR]
+    B -- "large 10k+ per class" --> FT[Fine-tune from start<br/>or even train from scratch]
+    A --> C{Deployment target?}
+    C -- "Phone / edge" --> M[MobileNetV3 / EfficientNet-B0]
+    C -- "Server, accuracy first" --> R[ResNet-50 / EfficientNet-B3 / ConvNeXt]
+    C -- "Latest research" --> V[ViT or via the timm library]
+```
+
+```
+   ImageNet pre-train          Your task
+   ───────────────────         ──────────
+   1.4M images, 1000 classes ─►  4 classes, 4k images
+                                   │
+        knows edges/textures       │  swap final layer
+        from millions of photos    │  fine-tune softly
+                                   │
+                              high accuracy quickly
+```
+
+## Why this matters
+- For 99% of vision projects today you should not train from scratch — transfer learning is the default.
+- Picking the right pre-trained model (size vs accuracy vs deployment target) is more impactful than tuning hyperparameters.
+- Matching the **input preprocessing** (size + ImageNet normalization) to the pre-trained model is a silent-failure trap many beginners hit.
+
+---
+
 ## 1. Why transfer learning is non-negotiable in 2025
 
 Training a CNN from scratch on a few thousand images gives mediocre accuracy. Taking a model **pre-trained on ImageNet** (1.4M images, 1000 classes) and fine-tuning it on your few thousand → near state-of-the-art.
@@ -254,3 +328,43 @@ This is exactly the recipe for the car-damage-detection project.
 - [ ] Pick a pre-trained model for a small mobile-deployed app.
 - [ ] Pick one for a high-accuracy server-side classifier.
 - [ ] Why use a tiny LR during fine-tune?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Transfer learning** | Reusing a model trained on one task to solve a related task |
+| **Pre-trained model** | A network whose weights were already learned on a big dataset (e.g., ImageNet) |
+| **Backbone** | The feature-extracting part of a pre-trained network |
+| **Head** | The final task-specific layers (the classifier) |
+| **Feature extraction** | Freeze the backbone, train only a new head |
+| **Fine-tuning** | Unfreeze (some of) the backbone and continue training at a small LR |
+| **Two-phase training** | Feature-extract first, then fine-tune — the modern default |
+| **Frozen layer** | Layer with `requires_grad=False`; gradients don't flow into it |
+| **Unfreeze** | Re-enable training on previously frozen layers |
+| **Catastrophic forgetting** | Aggressive fine-tuning erases useful pre-trained knowledge |
+| **ImageNet** | The 1.4M-image, 1000-class dataset most pre-trained models were trained on |
+| **`models.resnet50` / `efficientnet_b0`** | torchvision shortcuts to load pre-trained networks |
+| **`weights=...`** | Modern torchvision API for selecting which pre-trained weight set to load |
+| **`weights.transforms()`** | Auto-generated preprocessing pipeline matching the pre-trained model |
+| **`model.fc` / `model.classifier`** | Common attribute names for the final classifier layer |
+| **timm** | PyTorch Image Models — community library with hundreds of pre-trained vision models |
+| **ResNet** | Residual-network family with skip connections; reliable baseline |
+| **EfficientNet** | Family that scales depth/width/resolution together — accuracy-efficient |
+| **MobileNet** | Compact CNN family for mobile/edge deployment |
+| **ViT** | Vision Transformer — splits images into patches and uses attention |
+| **ConvNeXt** | Modern CNN designed with Transformer-era training tricks |
+| **Layer-wise LR** | Different learning rates for different layers (early layers smaller, late layers larger) |
+| **Top-1 accuracy** | Whether the top-predicted class matches the true label |
+| **224×224** | Standard input size for most ImageNet pre-trained models |
+| **Normalize stats** | The per-channel mean/std the pre-trained model expects (use ImageNet's) |
+| **`ImageFolder`** | torchvision dataset that infers labels from folder names |
+| **Distillation** | Compressing a big teacher model into a smaller student model |
+
+## Further reading
+- Project that uses this directly: [../06-projects/01-car-damage-detection.md](../06-projects/01-car-damage-detection.md)
+- Augmentation pairs with transfer learning: [02-data-augmentation.md](02-data-augmentation.md)
+- For NLP: equivalent idea via BERT in [../04-sequence/05-bert-huggingface.md](../04-sequence/05-bert-huggingface.md)
+- timm docs: https://huggingface.co/docs/timm

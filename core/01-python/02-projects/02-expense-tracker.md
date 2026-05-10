@@ -15,6 +15,66 @@
 
 ---
 
+## In one sentence
+You build a small **fullstack app** to log and analyze daily expenses — Streamlit on top, FastAPI in the middle, MySQL underneath — proving you can ship the whole loop, not just a notebook.
+
+## Real-world analogy
+Think of a personal expense diary. The pages where you write entries are the **frontend** (Streamlit). The clerk who validates and files your entries is the **backend** (FastAPI). The locked filing cabinet that keeps every entry safe is the **database** (MySQL). Each layer has one job; together they make a real product you could deploy and use yourself.
+
+## The intuition (plain English)
+Three layers, one HTTP call between each. The user clicks something in **Streamlit**, which sends an HTTP request to **FastAPI**, which validates with **Pydantic**, talks to **MySQL** via SQL, and returns JSON. You add **logging** so you can see what happened in production, **pytest** so you can refactor without fear, and a **README** so a recruiter can run it. This is the standard shape of every web product — once you have built it once, every future API+UI tool feels familiar.
+
+## Mini worked example
+The end-to-end flow for adding one expense:
+
+```python
+# 1. User edits a row in Streamlit and clicks Save
+# frontend/app.py
+import requests
+requests.post(
+    "http://localhost:8000/expenses/2026-05-10",
+    json=[{"amount": 250.0, "category": "Food", "notes": "lunch"}],
+)
+
+# 2. FastAPI validates with Pydantic + writes to MySQL
+# backend/server.py
+@app.post("/expenses/{expense_date}")
+def add(expense_date: date, items: list[dict]):
+    for it in items:
+        db_helper.insert_expense(expense_date, it["amount"], it["category"], it.get("notes"))
+    logger.info(f"saved {len(items)} expenses for {expense_date}")
+    return {"status": "ok"}
+
+# 3. db_helper runs the SQL
+cur.execute(
+    "INSERT INTO expenses (expense_date, amount, category, notes) VALUES (%s,%s,%s,%s)",
+    (expense_date, amount, category, notes),
+)
+conn.commit()                     # without this, no row appears
+```
+
+Three files, three layers, one round-trip. That is a fullstack app in 20 lines.
+
+## At-a-glance
+
+```
+┌──────────────┐     HTTP POST       ┌──────────────┐    SQL INSERT    ┌──────────────┐
+│  Streamlit   │  ───────────────►   │   FastAPI    │  ──────────────► │    MySQL     │
+│  (UI page)   │                     │   (server)   │                  │  (storage)   │
+│              │  ◄──── JSON ────    │              │  ◄── rows ────   │              │
+└──────────────┘                     └──────────────┘                  └──────────────┘
+                                            │
+                                            └──── server.log (logging)
+                                            └──── tests/ (pytest)
+```
+
+## Why this matters
+- Most data-Python courses stop at notebooks. Shipping an app proves you can produce something a non-technical user can click.
+- The Streamlit + FastAPI + MySQL stack is the modern shape of internal data tools at most companies.
+- This is your second portfolio repo and your second LinkedIn post — recruiter gold.
+
+---
+
 ## 1. Problem statement
 
 Build a small fullstack app to track personal expenses:
@@ -298,3 +358,49 @@ These extensions become great LinkedIn posts.
 - [ ] Does my README have a screenshot?
 - [ ] Have I deployed it somewhere (or written instructions)?
 - [ ] Have I posted a LinkedIn writeup with a Loom/screen-recording demo?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Fullstack** | Code spanning UI + server + storage |
+| **Frontend** | The UI the user sees |
+| **Backend** | The server that handles business logic + data access |
+| **Database** | The persistent store — survives restarts |
+| **HTTP** | The protocol browsers and servers speak |
+| **REST API** | A backend that exposes resources via URLs + verbs (GET/POST/PUT/DELETE) |
+| **JSON** | The data format sent between frontend and backend |
+| **CRUD** | Create, Read, Update, Delete — the four basic data operations |
+| **Streamlit** | A Python library for building web UIs from scripts |
+| **FastAPI** | A Python web framework with auto-generated docs and Pydantic validation |
+| **uvicorn** | The server program that runs FastAPI apps |
+| **Swagger UI / `/docs`** | Auto-generated interactive API documentation |
+| **MySQL** | A widely used open-source relational database |
+| **`mysql-connector-python`** | The MySQL driver Python uses to talk to the DB |
+| **SQLAlchemy** | A higher-level Python toolkit for SQL — ORM and query builder |
+| **ORM** (Object-Relational Mapper) | Lets you treat DB rows as Python objects |
+| **Pydantic** | Library that validates incoming data against a model |
+| **Pydantic model** | A class describing required fields and types |
+| **`BaseModel`** | The Pydantic base class your models inherit from |
+| **HTTP status code** | Numeric result of a request — 200 OK, 404 not found, 500 server error |
+| **`HTTPException`** | FastAPI's way to return an error with a status code |
+| **Cursor** | Object you use to send SQL and read rows back |
+| **`commit`** | Tells the DB to actually save changes |
+| **Parameterized query** | SQL with `%s` placeholders — prevents SQL injection |
+| **SQL injection** | Attack where user input becomes SQL — defeated by parameterized queries |
+| **Context manager** | `with` block that guarantees cleanup (close cursor, close connection) |
+| **Logging** | Writing structured runtime messages to a file or stream |
+| **`logger.info/warning/error`** | Standard log levels |
+| **pytest** | The testing framework that auto-discovers `test_*` files |
+| **Fixture** | A pytest function providing setup data to tests |
+| **Mocking** | Replacing real services (DB, HTTP) with stand-ins during tests |
+| **`requirements.txt`** | The package list a fresh clone needs to install |
+| **Deployment** | Hosting your app on a public URL — Render, Railway, Streamlit Cloud |
+
+## Further reading
+- Foundations: [../03-advanced/03-apis-fastapi.md](../03-advanced/03-apis-fastapi.md)
+- Storage + tests + Pydantic: [../03-advanced/04-logging-pytest-pydantic-mysql.md](../03-advanced/04-logging-pytest-pydantic-mysql.md)
+- Project 1 (the analytics counterpart): [01-hospitality-eda.md](01-hospitality-eda.md)
+- ML model deployment uses the same stack: [../../06-machine-learning/05-lifecycle-mlops/README.md](../../06-machine-learning/05-lifecycle-mlops/README.md)

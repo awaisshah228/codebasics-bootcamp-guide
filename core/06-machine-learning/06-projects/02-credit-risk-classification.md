@@ -13,6 +13,57 @@ This is one of the most common and well-paid ML use cases in financial services.
 
 ---
 
+## In one sentence
+You build a model that gives every loan applicant a "probability of defaulting" score — and that score drives the lender's automated decision: **approve, decline, or refer to a human**.
+
+## Real-world analogy
+Imagine an experienced loan officer who's seen 100,000 past borrowers. She remembers patterns — "high credit utilization plus short employment plus prior late payments → trouble." You're encoding that decades-worth of intuition into a model. The model never replaces her, but it scores 1,000 applications/day so she focuses her time on the borderline cases.
+
+## The intuition (plain English)
+1. **Imbalanced binary classification** — typically only 5–15% of applicants default. Accuracy is useless; use AUC, PR-AUC, KS.
+2. **Two acceptable model families**:
+   - **Logistic regression on WOE-encoded features** — interpretable, regulator-friendly, near-XGBoost performance.
+   - **XGBoost with `scale_pos_weight`** — best raw accuracy, explained per-prediction via SHAP.
+3. **Threshold tuning is the real work**: "approve top 60% of applications by score" or "keep precision ≥ 90% on rejects."
+4. **SHAP explanations** are often *legally required* — you must be able to tell a rejected applicant why.
+5. **Subgroup fairness check** — does the model perform similarly across age / gender / region? Banks face regulatory scrutiny here.
+
+## Mini worked example — three loan applicants
+
+```
+applicant   income   credit_score   debt/income   prior_defaults     model_prob   decision
+   Anil      90k       780             0.15             0               0.04        APPROVE
+   Bina      35k       620             0.42             1               0.61        DECLINE
+   Chand     55k       690             0.28             0               0.31        REFER (manual review)
+```
+
+The bank set thresholds: prob ≤ 0.20 → auto-approve; prob ≥ 0.55 → auto-decline; in between → human reviewer. Threshold values aren't 0.5 by default — they come from cost-benefit analysis: an approved default costs $10,000; a wrongly declined good loan costs $200 of customer goodwill. The breakeven threshold is what you ship.
+
+## At-a-glance — full project flow
+
+```mermaid
+flowchart TB
+    Data[1. Data understanding<br/>defaulter rate, fields] --> EDA[2. EDA + outlier IQR treatment]
+    EDA --> WOE[3. WOE / IV feature engineering]
+    WOE --> Base[4. Logistic baseline<br/>regulator-friendly]
+    Base --> XGB[5. XGBoost with scale_pos_weight<br/>+ early stopping]
+    XGB --> Tune[6. Optuna hyperparam search]
+    Tune --> Eval[7. AUC, Gini, KS, PR-AUC<br/>+ confusion matrix at threshold]
+    Eval --> Cal[8. Calibrate probabilities]
+    Cal --> Thr[9. Pick business threshold<br/>cost-benefit]
+    Thr --> SHAP[10. SHAP per-prediction<br/>+ global summary]
+    SHAP --> Fair[11. Subgroup fairness audit]
+    Fair --> Stream[12. Streamlit demo + model card]
+```
+
+## Why this matters
+- **Most-paid ML use case in banking and fintech.** Credit risk modelers earn 1.5–2× generic data scientists.
+- **The portfolio project recruiters love.** It exercises every classification skill: imbalance, AUC/PR/KS, threshold tuning, calibration, SHAP, fairness.
+- **Real regulatory teeth**: FCRA / GDPR / RBI rules require per-decision explanations and fairness audits — you'll learn the production-grade workflow.
+- **Companion to the healthcare-premium regression project** — together they cover both flavors of supervised ML on tabular data.
+
+---
+
 ## Domain-specific concepts
 
 ### KS Statistic (Kolmogorov-Smirnov)
@@ -210,3 +261,49 @@ credit-risk/
 - [ ] Is my README a defensible business case (impact in $)?
 - [ ] Did I post a LinkedIn writeup with a Streamlit demo link?
 - [ ] Does my repo include a model card?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Default** | Borrower stops repaying — the event we predict |
+| **Probability of default (PD)** | Model output — how likely this applicant is to default |
+| **NBFC (Non-Banking Financial Company)** | A lender that's not a traditional bank |
+| **Class imbalance** | Defaulters are rare (5–15%); standard accuracy lies |
+| **`scale_pos_weight`** | XGBoost's class-imbalance knob — set to `n_neg / n_pos` |
+| **`class_weight="balanced"`** | sklearn equivalent for logistic regression / RF |
+| **WOE (Weight of Evidence)** | `ln(P(good|x) / P(bad|x))` — turns each feature bin into a numeric score |
+| **IV (Information Value)** | How predictive a feature is — drop features with IV < 0.02 |
+| **`xverse`** | Python lib computing WOE / IV |
+| **ROC-AUC** | Area under ROC curve — ranking quality |
+| **PR-AUC / Average Precision** | Better than ROC-AUC under heavy imbalance |
+| **Gini coefficient** | `2·AUC − 1` — banking-industry standard |
+| **KS statistic (Kolmogorov-Smirnov)** | Max gap between CDFs of good and bad applicants — > 0.4 is strong |
+| **Confusion matrix at threshold** | TP/FP/FN/TN counts at the deployed threshold |
+| **Decision threshold** | Probability cutoff for declining vs. approving |
+| **Cost-benefit analysis** | Pick threshold by maximizing `TP·B − FP·C − FN·K` in dollars |
+| **Calibration** | Whether "30% probability" actually means 30% of such cases default |
+| **`CalibratedClassifierCV`** | sklearn helper to recalibrate probabilities |
+| **SHAP (SHapley Additive exPlanations)** | Per-prediction feature attribution — required for compliance |
+| **TreeExplainer** | SHAP variant optimized for tree models — fast and exact |
+| **Force plot** | SHAP visualization showing how each feature pushed one prediction up/down |
+| **Summary plot** | SHAP global view — which features matter most overall |
+| **Subgroup fairness** | Performance comparison across protected groups (age, gender, region) |
+| **Disparate impact** | Legally significant gap in approval rates across groups |
+| **Model card** | Document describing model purpose, data, metrics, limits, fairness audits |
+| **Stratified k-fold** | CV split that preserves class proportions per fold |
+| **Optuna** | Bayesian hyperparameter tuning library |
+| **Early stopping** | Stop XGBoost training when validation AUC plateaus |
+| **Streamlit** | Library to ship a model demo as a web app in minutes |
+| **Repo deliverables** | Notebooks, src, model file, model card, business deck, requirements, README |
+
+## Further reading
+- Logistic regression baseline: [../02-classification/01-logistic-regression.md](../02-classification/01-logistic-regression.md)
+- Classification metrics: [../02-classification/02-classification-metrics.md](../02-classification/02-classification-metrics.md)
+- Class imbalance: [../02-classification/06-class-imbalance.md](../02-classification/06-class-imbalance.md)
+- ROC / AUC / threshold tuning: [../02-classification/07-roc-auc.md](../02-classification/07-roc-auc.md)
+- XGBoost: [../03-ensemble/02-boosting-adaboost-gbm-xgb.md](../03-ensemble/02-boosting-adaboost-gbm-xgb.md)
+- VIF (multicollinearity): [../04-unsupervised/02-vif.md](../04-unsupervised/02-vif.md)
+- Companion regression project: [01-healthcare-premium-regression.md](01-healthcare-premium-regression.md)

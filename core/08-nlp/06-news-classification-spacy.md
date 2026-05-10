@@ -5,6 +5,64 @@
 
 ---
 
+## In one sentence
+You build a model that reads a news article and tags it with a topic — Sports, Business, Sci/Tech, World — then compare three approaches (TF-IDF, spaCy, DistilBERT) on the same dataset.
+
+## Real-world analogy
+Think of it as hiring an intern to sort the morning's news into the right newspaper sections. A junior intern (TF-IDF + Logistic Regression) is fast, cheap, and right ~91% of the time. A more experienced editor (spaCy textcat) reads a touch more carefully — ~92%. A senior editor (DistilBERT) reads the whole article in context — ~94-95% but takes a lot longer per article. Pick the intern that fits your budget and deadline.
+
+## The intuition (plain English)
+News classification is *the* canonical NLP project. The same template you build here works for spam detection, support-ticket routing, sentiment analysis, and topic tagging. You always start with a TF-IDF + Logistic Regression baseline because it trains in seconds and tells you what's *barely* possible. Only when that's not good enough do you climb the ladder: spaCy's text categorizer for slightly better accuracy with NLP-friendly tooling, then DistilBERT when you really need state of the art and have a GPU.
+
+## Mini worked example — three real headlines, three labels
+
+Inputs:
+```
+1. "Manchester United beat Chelsea 3-1 in Premier League opener."
+2. "Apple reports record Q4 profits, stock hits all-time high."
+3. "NASA confirms water on the Moon's sunlit surface."
+```
+
+A trained classifier returns:
+
+```
+1 -> Sports     (probability 0.97)
+2 -> Business   (probability 0.93)
+3 -> Sci/Tech   (probability 0.91)
+```
+
+Inside, the TF-IDF + Logistic Regression model is just doing this:
+
+```
+features for headline 1 = TF-IDF(["manchester", "united", "beat", "chelsea", "3-1", ...])
+score per class         = features . weights[class]
+pick class with highest score
+```
+
+The model learns weights like: `weights["beat"]` is high for Sports and near zero for everything else. Same idea for `weights["profits"]` -> Business and `weights["nasa"]` -> Sci/Tech.
+
+## At-a-glance — climb the accuracy ladder
+
+```mermaid
+flowchart LR
+    Start[News dataset<br/>e.g. AG News, 120k articles] --> A[Stage 1<br/>TF-IDF + LogReg<br/>~91 percent]
+    A --> Q1{Good enough?}
+    Q1 -- yes --> Ship1[Ship it]
+    Q1 -- no --> B[Stage 2<br/>spaCy textcat<br/>~92 percent]
+    B --> Q2{Good enough?}
+    Q2 -- yes --> Ship2[Ship it]
+    Q2 -- no --> C[Stage 3<br/>DistilBERT fine-tune<br/>~94-95 percent]
+    C --> Ship3[Ship it]
+```
+
+## Why this matters
+- This is the bread-and-butter NLP project — interview-friendly and portfolio-ready.
+- It teaches the most important lesson: **always have a cheap baseline** before reaching for BERT.
+- Error analysis on this project teaches you to spot which categories overlap (Business vs Sci/Tech) and what to do about it.
+- Same code structure ports straight to spam detection, ticket routing, and sentiment analysis.
+
+---
+
 ## The project
 
 Given a news article (headline + body), predict its **category**: business, sports, tech, politics, entertainment, etc.
@@ -199,3 +257,46 @@ Done. 15 lines, deployable on Streamlit Cloud in 5 minutes.
 - [ ] When pick TF-IDF over BERT in production?
 - [ ] Deploy a news classifier as a Streamlit app.
 - [ ] Why is "always start with TF-IDF baseline" a mantra?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Text classification** | Assigning a label from a fixed set to a piece of text |
+| **Multi-class** | More than two possible labels (Sports, Business, Sci/Tech, World) |
+| **Multi-label** | Each item can have several labels at once (different from multi-class) |
+| **Baseline** | The simplest model you build first, to measure improvement against |
+| **AG News** | A standard 4-class news dataset on HuggingFace `datasets` |
+| **BBC News topics** | An alternative 5-class news dataset |
+| **Pipeline** | sklearn or spaCy object that bundles preprocessing + model |
+| **TF-IDF + LogReg** | The classic text-classification baseline (TF-IDF features, logistic regression) |
+| **spaCy textcat** | spaCy's built-in text categorizer component |
+| **`exclusive_classes`** | spaCy textcat option meaning "exactly one label per doc" (not multi-label) |
+| **`Example.from_dict`** | spaCy training format that pairs a doc with its target labels |
+| **`minibatch`** | spaCy helper that yields batches of training examples |
+| **`begin_training`** | spaCy call that initializes optimizer state |
+| **DistilBERT** | A 40% smaller, 60% faster BERT — keeps ~95% of the accuracy |
+| **Fine-tuning** | Continuing to train a pre-trained model on your specific data |
+| **Trainer** | HuggingFace's high-level training loop that handles batching, GPU, evaluation |
+| **`TrainingArguments`** | HuggingFace config for epochs, batch size, learning rate |
+| **Tokenizer** | The component that turns raw text into model-readable token IDs |
+| **`AutoTokenizer` / `AutoModelForSequenceClassification`** | HuggingFace shortcuts that load the right class for a checkpoint name |
+| **`load_dataset`** | HuggingFace `datasets` function for downloading benchmark datasets |
+| **Accuracy / F1** | Classification metrics — accuracy = % correct, F1 balances precision and recall |
+| **Macro-F1** | F1 averaged equally across classes — fairer when classes are imbalanced |
+| **Confusion matrix** | A table showing which true label got predicted as which |
+| **Error analysis** | Inspecting wrong predictions to find systematic patterns |
+| **Class confusion** | When two classes look similar to the model (e.g., Business vs Sci/Tech) |
+| **Streamlit** | A Python library for one-file web apps — perfect for ML demos |
+| **`joblib.load` / `joblib.dump`** | Python serialization for sklearn models |
+| **Inference latency** | How long the model takes to predict one item |
+| **Cost / latency / accuracy trade-off** | The three production knobs you balance |
+
+## Further reading
+- Previous: [04-bow-ngrams-tfidf.md](04-bow-ngrams-tfidf.md) — the features used by the baseline
+- Next: [07-bert-finetuning-huggingface.md](07-bert-finetuning-huggingface.md) — the full DistilBERT recipe
+- DL bridge: [transformers](../07-deep-learning/04-sequence/03-transformer-architecture.md), [BERT](../07-deep-learning/04-sequence/05-bert-huggingface.md)
+- Deployment: [Streamlit guide](../07-deep-learning/05-deployment/01-streamlit.md), [FastAPI guide](../07-deep-learning/05-deployment/02-fastapi.md)
+- Style guide: [BEGINNER-STYLE-GUIDE.md](../../BEGINNER-STYLE-GUIDE.md)

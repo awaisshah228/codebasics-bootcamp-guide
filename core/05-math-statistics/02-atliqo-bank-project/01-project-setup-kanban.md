@@ -11,6 +11,51 @@
 
 ---
 
+## In one sentence
+Real analytics work starts with a **vague business ask** ("launch a credit card better than competitors"), and Kanban + JIRA is how a working data team turns that into 30 trackable tasks across the 4 phases of the project.
+
+## Real-world analogy
+Think of Kanban as a **kitchen ticket rail** in a busy restaurant. Each ticket is a task. It moves from "ordered" → "cooking" → "ready" → "served". The chef can see the whole queue at a glance and nothing gets dropped. Your AtliQo analysis is exactly that, but each ticket is a SQL query, a cleaning step, or a stakeholder slide.
+
+## At-a-glance — the AtliQo team and the Kanban flow
+
+```mermaid
+flowchart LR
+    Stakeholders[Bashneer + Natasha<br/>= business stakeholders] -- vague ask --> Tony[Tony<br/>senior analyst]
+    Tony -- mentors + delegates --> Peter[Peter — that's YOU<br/>junior analyst]
+    Peter -- progress updates --> Tony
+    Tony -- digestible answer --> Stakeholders
+    Peter -- tasks managed via --> Board[Kanban / JIRA Board<br/>Backlog · To Do · In Progress · Review · Done]
+```
+
+## Mini worked example — a Phase-1 task on the board
+
+```
+Card title: "Clean & treat outliers in Annual Income"
+Description:
+  - Drop NULLs (1.2% of rows)
+  - Detect outliers via IQR (k=1.5)
+  - Cap (Winsorize) instead of drop — preserve real high earners
+  - Document decision in cleaning_log.md
+Assignee: Peter
+Status: In Progress
+Estimate: 4 hours
+Acceptance criteria:
+  - [ ] Cleaned dataset saved as data/clean/income.csv
+  - [ ] Before/after histograms in notebook
+  - [ ] One-line decision log entry
+```
+
+That's a real ticket from Phase 1. Multiply by 30 to get the full board.
+
+## Why this matters
+- **Stakeholder management** is half the job — Phase 1 ends with a meeting where you defend choices to Bashneer.
+- **Kanban discipline** is what keeps a 90-day project from sliding into chaos.
+- **JIRA / Trello / Notion** are interchangeable; the *technique* matters more than the tool.
+- **You'll be using these in every job after this** — analytics teams universally run on tickets.
+
+---
+
 ## 1. The story (Codebasics' cinematic setup)
 
 **Bashneer Grower** runs **AtliQo Bank**. The business wants to launch a new **credit card** in a competitive market. Rather than a generic launch, leadership asks the data team to identify the right **target market segment** — customers most likely to convert, profitably.
@@ -162,3 +207,36 @@ atliqo-bank/
 - [ ] Are my 11 task cards in the backlog?
 - [ ] Have I imported the CSVs into MySQL or pandas?
 - [ ] Do I know who the stakeholders are and what they expect at Phase 1 wrap?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **AtliQo Bank** | Fictional bank in the bootcamp's case-study universe — the project client |
+| **Bashneer Grower** | Fictional founder of AtliQo — the executive sponsor |
+| **Tony / Peter / Natasha** | Codebasics' recurring characters (senior analyst, junior, project manager) |
+| **Brief** | The original business request — usually vague, your job is to clarify |
+| **Stakeholder** | Anyone who has a say in the project's direction or outcome |
+| **Kickoff meeting** | Project's first formal meeting — sets goals, owners, success criteria |
+| **Kanban** | A visual workflow system: cards move across columns (To Do → In Progress → Done) |
+| **JIRA** | Atlassian's issue / project management tool — common in tech companies |
+| **Trello / Notion / Linear** | Lightweight Kanban alternatives — same technique, different tool |
+| **Backlog** | The pile of tasks not yet started |
+| **WIP limit** | Cap on how many cards can be "In Progress" at once — prevents thrashing |
+| **Acceptance criteria** | Bullet list defining "done" for a task |
+| **Story / ticket / card** | Different names for one task on a Kanban board |
+| **Sprint** | A fixed-length work cycle (1-2 weeks) — Scrum concept, often layered on top of Kanban |
+| **Standup** | 15-min daily team check-in: yesterday / today / blockers |
+| **Phase** | A logical group of tasks with a stakeholder check-point at the end |
+| **MVP (Minimum Viable Product)** | The smallest version that delivers value — used to prioritize Phase 1 scope |
+| **Risk register** | List of things that could derail the project, with mitigations |
+| **CSV / fact / dim tables** | Raw data formats and warehouse schema components — covered in Module 1 |
+| **Phase-1 wrap** | The stakeholder meeting where you defend Phase-1 conclusions and propose Phase 2 |
+
+## Further reading
+- Next: [02-phase-1-find-target-market.md](02-phase-1-find-target-market.md)
+- Cleaning + outlier techniques: [../01-foundations/02-central-tendency-dispersion.md](../01-foundations/02-central-tendency-dispersion.md)
+- Distributions for outlier rules: [../01-foundations/04-distributions.md](../01-foundations/04-distributions.md)
+- Hypothesis testing for Phase 2: [../03-inferential/02-hypothesis-testing.md](../03-inferential/02-hypothesis-testing.md)

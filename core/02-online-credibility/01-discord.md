@@ -5,6 +5,24 @@
 
 ---
 
+## In one sentence
+Treat the Codebasics Discord as the **fourth pillar** of the bootcamp (alongside videos, projects, quizzes) — students who post + answer there finish faster and land jobs faster than those who don't.
+
+## Asking a good question — at-a-glance
+
+```mermaid
+flowchart LR
+    Q[I want to ask a question] --> W1[State what you're trying to do]
+    W1 --> W2[Show what you tried]
+    W2 --> W3[Paste the exact error / actual vs expected output]
+    W3 --> W4[Attach minimal code / screenshot]
+    W4 --> W5[Hit send → answer arrives 10× faster]
+```
+
+> 90% of "I asked but no one helped" cases are bad question structure, not unhelpful community.
+
+---
+
 ## What this lecture does
 
 Walks you through joining the Codebasics Discord server, verifying your enrollment, and unlocking the private channels reserved for paid bootcamp learners.
@@ -120,4 +138,29 @@ The good version:
 - [ ] Joined ≥3 module-relevant channels
 - [ ] Read the rules
 - [ ] Saved the "good question" template somewhere I'll reuse
-- [ ] Reacted ✅ to at least one answer that helped me this week
+- [ ] Reacted to at least one answer that helped me this week
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Discord** | Real-time chat platform organized into servers and channels |
+| **Server** | A whole Discord workspace (Codebasics has one for the bootcamp) |
+| **Channel** | A topic-specific room inside a server (`#python`, `#sql`, etc.) |
+| **Mute / unmute channel** | Hide notifications from chatty channels you don't follow daily |
+| **DM (Direct Message)** | Private 1-to-1 message — use sparingly, never DM mentors with homework |
+| **Avatar** | Your profile picture |
+| **Bio** | One-line description on your Discord profile |
+| **Code block** | Triple-backtick wrapper around code so it renders correctly |
+| **Reaction (emoji)** | Quick acknowledgment without writing a full reply (✅ "this helped") |
+| **MEE6 / Carl-bot** | Common Discord bots that handle role assignment / verification |
+| **Verification** | One-time enrollment check to unlock paid-learner channels |
+| **Feynman technique** | Learning by explaining — answering Discord questions cements your own knowledge |
+| **#good-first-issue** | Slang for issues open-source projects label as beginner-friendly |
+| **Snipe (anti-pattern)** | Privately DMing a job lead so others don't see — bad community behavior |
+
+## Further reading
+- Next: [02-credibility-opensource.md](02-credibility-opensource.md)
+- Help-seeking flow: [../00-bootcamp-introduction/02-learning-method-support.md](../00-bootcamp-introduction/02-learning-method-support.md)

@@ -5,6 +5,74 @@
 
 ---
 
+## In one sentence
+**MNIST** is the "Hello World" of deep learning — 70,000 tiny 28×28 grayscale digits where you train your first network end-to-end and reach 99% accuracy in a few minutes.
+
+## Real-world analogy
+MNIST is to deep learning what *cooking pasta* is to learning to cook: low stakes, fast feedback, and once you can make it well you understand the basics that scale to fancier dishes.
+
+## The intuition (plain English)
+- Each image is a 28×28 grid of pixel intensities (0 = black, 1 = white).
+- You **flatten** the grid into a 784-number vector and feed it to an MLP, or feed the 2D grid directly to a CNN.
+- The model outputs 10 numbers (one per digit class); the largest one is the prediction.
+- You train with cross-entropy loss + Adam, and after ~5 epochs the model gets ~98% on test data with an MLP, ~99% with a CNN.
+
+## Mini worked example — what one prediction looks like
+
+You feed in a 28×28 image of the digit "7":
+
+```
+input: image of "7"  →  Flatten → 784 numbers in [0, 1]
+
+After model:
+   logits  = [-1.0, -2.0, 0.5, 0.1, -0.5, -0.8, -1.5,  4.7,  0.0, -2.0]
+                                                       ↑
+                                        index 7 is the largest
+
+After softmax:
+   probs   = [0.003, 0.001, 0.013, 0.009, 0.005, 0.004, 0.002, 0.943, 0.008, 0.001]
+                                                                ↑
+                                         model says "7" with 94% confidence
+
+prediction = argmax(probs) = 7        ← matches the true label
+```
+
+That same prediction shape — logits → softmax → argmax — is what every classifier in this module produces.
+
+## At-a-glance — the MNIST pipeline
+
+```mermaid
+flowchart LR
+    A[60k training images] --> B[ToTensor + Normalize]
+    B --> C[DataLoader<br/>batch=64]
+    C --> D[Model<br/>MLP or CNN]
+    D --> E[Cross-entropy loss]
+    E --> F[Adam optimizer]
+    F --> G[Update weights]
+    G --> C
+    D --> H[Test set 10k]
+    H --> I[Accuracy + confusion matrix]
+```
+
+```
+   28×28 grayscale image
+         │
+         ▼
+    [Flatten 784]            (MLP path)
+         │
+         ▼
+   [Linear 784→256] ─► ReLU ─► [Linear 256→64] ─► ReLU ─► [Linear 64→10] ─► logits
+                                                                              │
+                                                                          softmax → digit 0..9
+```
+
+## Why this matters
+- Every concept in this module — DataLoader, model, loss, optimizer, training loop, evaluation — is on display in one short script.
+- Once you can hit 98% on MNIST, swapping in CIFAR-10, Fashion-MNIST, or your own dataset is mostly *changing 5 lines of data-loading code*.
+- The MLP-vs-CNN comparison is the cleanest demonstration of why architecture matters for image data.
+
+---
+
 ## Why MNIST is the universal first DL project
 
 - Simple: 28×28 grayscale digits, 10 classes
@@ -183,3 +251,44 @@ Your MLP gets ~88%, CNN ~92%. Demonstrates that you have to *think* about archit
 - [ ] Switch to Fashion-MNIST without changing model code.
 - [ ] Plot 10 misclassified images.
 - [ ] Write the training loop from memory in 15 lines.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **MNIST** | Classic dataset of 70,000 handwritten digit images, 28×28 grayscale |
+| **Fashion-MNIST** | Drop-in replacement with clothing images — same shape, harder task |
+| **Grayscale** | Single-channel image: each pixel is one intensity number |
+| **Channel** | A 2D image plane (RGB images have 3 channels; MNIST has 1) |
+| **Flatten** | Reshape a 2D image into a 1D vector (28×28 → 784) |
+| **Normalize** | Subtract mean, divide by std — keeps inputs centered and scaled |
+| **`transforms.ToTensor`** | Converts a PIL image to a `[0,1]` tensor of shape (C, H, W) |
+| **`transforms.Normalize(mean, std)`** | Standardizes pixel values per channel |
+| **DataLoader** | Iterator that batches and shuffles your dataset |
+| **Batch size** | How many images per training step |
+| **`shuffle=True`** | Randomize sample order each epoch — essential for training |
+| **MLP** | Multi-Layer Perceptron — fully-connected baseline |
+| **CNN** | Convolutional Neural Network — exploits spatial structure |
+| **`Conv2d`** | A 2D convolution layer (image kernel) |
+| **`MaxPool2d`** | Downsamples by taking the max in each window |
+| **Padding** | Adds zero-pixels around the edge so the output keeps a useful size |
+| **Logits** | Raw network outputs *before* softmax |
+| **Softmax** | Converts logits into a probability distribution over classes |
+| **Argmax** | Index of the largest value — used to pick the predicted class |
+| **`CrossEntropyLoss`** | Combined log-softmax + negative-log-likelihood loss for classification |
+| **Adam** | Adaptive optimizer — popular default for deep learning |
+| **Accuracy** | Fraction of predictions that match the true label |
+| **Confusion matrix** | Table showing which classes get mistaken for which others |
+| **Epoch** | One full pass through the training data |
+| **`model.train()` / `model.eval()`** | Toggles training-mode (dropout/BN active) vs eval-mode |
+| **`@torch.no_grad()`** | Decorator/context that turns off gradient tracking — saves memory in evaluation |
+| **`num_workers`** | DataLoader processes used to load batches in parallel |
+| **Test accuracy** | Accuracy on data the model never trained on |
+| **Spatial structure** | Pixels close together usually relate — CNNs use this; MLPs don't |
+
+## Further reading
+- Optimizer details: [03-optimizers-momentum-adam.md](03-optimizers-momentum-adam.md)
+- Regularization to push past 99%: [04-regularization-dropout-batchnorm.md](04-regularization-dropout-batchnorm.md)
+- Full CNN treatment: [../03-vision/01-cnn.md](../03-vision/01-cnn.md)

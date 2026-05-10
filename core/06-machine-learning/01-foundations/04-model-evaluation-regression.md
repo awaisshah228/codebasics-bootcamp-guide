@@ -5,6 +5,78 @@
 
 ---
 
+## In one sentence
+**Regression evaluation** turns "how good is my model?" into a few honest numbers (MAE, RMSE, R²) — and the right answer depends on whether you care about typical errors, big errors, or how much variance you explain.
+
+## Real-world analogy
+You buy a bathroom scale. You want to know how good it is. You can ask:
+- "On average, how far off is each reading?" → **MAE** (mean absolute error).
+- "How bad are the *worst* readings?" → **RMSE** (root mean squared error — punishes big misses harder).
+- "Does it move with my actual weight at all, or is it useless?" → **R²** (correlation strength, kind of).
+
+You wouldn't pick a scale on just one of those — and you don't pick an ML model on just one either.
+
+## The intuition (plain English)
+- **MAE** is "average mistake in the same units as y." Easiest to communicate ("we're off by $18k on average").
+- **RMSE** is also in y's units, but big errors count quadratically — pick this when a $200k miss is way worse than ten $20k misses.
+- **R²** is unitless; tells you the *fraction of variance* explained vs. always predicting the mean. Higher is better, max is 1.
+- **MAPE** is percentage error — easy for execs but breaks when y is near 0.
+
+You always look at both **train** and **test** numbers. A train-test gap reveals overfitting.
+
+## Mini worked example — three predictions
+
+You have 4 actual house prices and your model's predictions:
+
+```
+actual:    [200, 250, 300, 400]   (in thousands)
+predicted: [210, 240, 320, 380]
+errors:    [-10,  10, -20,  20]
+```
+
+```
+MAE  = (|−10| + |10| + |−20| + |20|) / 4 = 60 / 4 = 15      → off by $15k typically
+MSE  = (100 + 100 + 400 + 400) / 4       = 250
+RMSE = √250                              ≈ 15.8             → similar to MAE here (errors balanced)
+mean(actual) = 287.5
+SS_res = 100+100+400+400 = 1000
+SS_tot = (200−287.5)² + (250−287.5)² + (300−287.5)² + (400−287.5)² = 22,500
+R²   = 1 − 1000/22500                    ≈ 0.956            → explains ~96% of variance
+MAPE = (10/200 + 10/250 + 20/300 + 20/400) / 4 × 100 ≈ 5.4% → off by ~5% on average
+```
+
+Now imagine the prediction `380` was actually `100` (a $300k miss on a $400k house):
+
+```
+MAE  = (10 + 10 + 20 + 300) / 4 = 85
+RMSE = √((100+100+400+90000)/4) = √22650 ≈ 150
+```
+
+RMSE jumped 10× while MAE only quintupled — that's the "RMSE punishes big errors" effect in action.
+
+## At-a-glance — pick the right metric
+
+```mermaid
+flowchart TB
+    Q[Reporting regression performance] --> Q1{Audience speaks in...}
+    Q1 -- dollars / units --> MAE_RMSE{Errors evenly spread?}
+    Q1 -- percentages --> MAPE[Use MAPE<br/>watch for y near 0]
+    Q1 -- "fit quality" --> R2[Use R²]
+    MAE_RMSE -- yes --> MAE[MAE — simple, robust]
+    MAE_RMSE -- "big misses matter more" --> RMSE[RMSE — penalizes outliers]
+    R2 --> Adj{Comparing models<br/>with different feature counts?}
+    Adj -- yes --> Adjr2[Adjusted R²]
+    Adj -- no --> Plain[R²]
+```
+
+## Why this matters
+- **Picking the wrong metric mis-ranks models.** A model with great R² may have terrible MAE for your audience.
+- **Train-test gap is your overfitting alarm.** Always print both.
+- **Residual plots catch what numbers hide** — funnel shapes, U-curves, missing categorical features.
+- **Healthcare project** reports MAE in dollars because that's what an underwriter cares about.
+
+---
+
 ## 1. The evaluation question
 
 After training, two questions:
@@ -192,3 +264,38 @@ That's the kind of sentence stakeholders read. Lead with that, support with a ch
 - [ ] How do you diagnose overfitting from train vs test scores?
 - [ ] Why is MAPE risky when y can be near 0?
 - [ ] Walk through how you'd present a regression model's performance to a non-technical exec.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **MAE (Mean Absolute Error)** | Average of `|actual − predicted|` — same units as y; easy to communicate |
+| **MSE (Mean Squared Error)** | Average of `(actual − predicted)²` — used as the loss in OLS; in y² units |
+| **RMSE (Root Mean Squared Error)** | √MSE — back in y's units; penalizes big misses more than MAE |
+| **R² (R-squared, coefficient of determination)** | Fraction of variance explained by the model. 1 = perfect; 0 = no better than mean. Negative = worse than mean. |
+| **Adjusted R²** | R² penalized for free parameters — fair when comparing models with different numbers of features |
+| **MAPE (Mean Absolute Percentage Error)** | Average percentage error — friendly for stakeholders, breaks when y ≈ 0 |
+| **SMAPE** | Symmetric MAPE — handles near-zero y better than plain MAPE |
+| **Residual** | One row's gap: `y − ŷ` |
+| **Residual plot** | Scatter of (predicted, residual) — should look like a random horizontal cloud |
+| **Heteroscedasticity** | Residual variance changes with the prediction (funnel shape) — model is biased on certain ranges |
+| **Homoscedasticity** | Constant residual variance — the "good" pattern |
+| **Train metric** | Score on the same data the model was fit on — overoptimistic if the model overfits |
+| **Test metric** | Score on never-seen data — your honest performance estimate |
+| **Train-test gap** | Difference between train and test scores — large gap signals overfitting |
+| **Overfitting** | Model memorizes training data quirks; test score worse than train |
+| **Underfitting** | Model too simple to capture patterns; both scores are bad |
+| **Cross-validation (CV)** | Average score across multiple train/val splits — more stable than a single split |
+| **k-fold CV** | Split data into k chunks; train on k−1, score on the held-out one; rotate; average |
+| **Predicted vs actual plot** | Scatter `(y_true, y_pred)`; points should hug the 45-degree diagonal |
+| **`.score()` (sklearn)** | For regressors, returns R² by default |
+| **Variance explained** | What R² is measuring — how much of y's spread the model accounts for |
+| **Baseline mean prediction** | Always-predict-the-mean — the model that gives R² = 0; benchmark for "is my model better than nothing?" |
+
+## Further reading
+- Previous: [03-gradient-descent-cost.md](03-gradient-descent-cost.md) — the loss function we minimize during training
+- Next: [05-preprocessing-encoding.md](05-preprocessing-encoding.md) — preparing features so evaluation is fair
+- CV deep-dive: [../03-ensemble/03-cross-validation-tuning.md](../03-ensemble/03-cross-validation-tuning.md)
+- Healthcare project applies these metrics: [../06-projects/01-healthcare-premium-regression.md](../06-projects/01-healthcare-premium-regression.md)

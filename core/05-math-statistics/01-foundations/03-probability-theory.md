@@ -8,6 +8,62 @@
 
 ---
 
+## In one sentence
+**Probability** is a number between 0 and 1 that tells you how *likely* something is — and **Bayes' theorem** is the rule for updating your belief when new evidence arrives.
+
+## Real-world analogy
+You think a friend is ~80% likely to show up to dinner. They text "running late" — your belief shifts up to 95%. They text "stuck in traffic" — maybe down to 70%. That mental updating you do automatically is exactly what Bayes' theorem does, but with numbers instead of vibes.
+
+## The intuition (plain English)
+Probability has three building blocks you keep reusing:
+
+1. **Basic probability** — counting favorable outcomes over total outcomes.
+2. **Combining probabilities** — when do you add them, when do you multiply them?
+3. **Updating with evidence** — given that something else happened, how does that change my answer? This is where Bayes lives.
+
+Most real-world problems aren't "what's the chance of rolling a 6?" They're "given I saw X, what's the chance of Y?" That conditional flavor is the whole point.
+
+## Mini worked example — a classroom
+
+A class of 50 students:
+- 30 study Math · 25 study Physics · 15 study **both**
+- A random student is picked.
+
+```
+                     Math (30)
+                ┌──────────────────┐
+                │             ┌────┼──────────┐
+                │   15 only   │ 15 │  10 only │
+                │             │both│          │   Physics (25)
+                │             └────┼──────────┘
+                └──────────────────┘
+                            10 study neither
+```
+
+| Question | Math | Answer |
+|----------|------|--------|
+| P(Math) | 30 / 50 | **0.60** |
+| P(Math AND Physics) | 15 / 50 | **0.30** |
+| P(Math OR Physics) | 30/50 + 25/50 − 15/50 | **0.80** |
+| P(Math \| Physics) — *given they study Physics* | 15 / 25 | **0.60** |
+
+The last row is **conditional probability** — knowing they study Physics changes the universe of students we're picking from (50 → 25).
+
+## At-a-glance — the three rules
+
+```mermaid
+flowchart TB
+    Q[A probability question] --> T{What's being asked?}
+    T -- "either A or B happens" --> ADD["Addition rule:<br/>P(A∪B) = P(A) + P(B) − P(A∩B)"]
+    T -- "both A and B happen" --> MUL["Multiplication rule:<br/>P(A∩B) = P(A) × P(B|A)"]
+    T -- "A given B already happened" --> BAY["Bayes' theorem:<br/>P(A|B) = P(B|A) × P(A) / P(B)"]
+```
+
+## The most surprising thing in this chapter
+A "99% accurate" disease test, applied to a rare disease, **mostly produces false alarms**. Even with a positive test, you're often *more* healthy than sick. That counter-intuitive result drops out of Bayes' theorem and is covered in §6 below.
+
+---
+
 ## 1. Probability — the basics
 
 A probability is a number in [0, 1] indicating how likely an event is.
@@ -198,3 +254,35 @@ perm(10, 3)        # # ordered arrangements of 3 from 10
 - [ ] Compute: P(at least one 6 in 4 rolls of a fair die).
 - [ ] Are "rolling even" and "rolling > 3" independent on a die? Show.
 - [ ] What's a "prior" in Bayesian terms?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Probability** | A number from 0 to 1: 0 = impossible, 1 = certain |
+| **Sample space (Ω)** | The full set of possible outcomes (rolling a die: {1,2,3,4,5,6}) |
+| **Event** | A subset of the sample space ("rolling even" = {2,4,6}) |
+| **Complement (A̅)** | "Not A". P(A̅) = 1 − P(A) |
+| **Union (A ∪ B)** | "A or B (or both)" |
+| **Intersection (A ∩ B)** | "A AND B" — both happen |
+| **Mutually exclusive** | Can't both happen at once. Example: "Monday" and "Tuesday" |
+| **Independent** | One doesn't affect the other. Example: two coin flips |
+| **Conditional probability P(A\|B)** | Probability of A *given* that B already happened |
+| **Prior P(A)** | Belief about A *before* seeing evidence |
+| **Likelihood P(B\|A)** | If A is true, how likely is the evidence B? |
+| **Posterior P(A\|B)** | Updated belief about A *after* seeing evidence B |
+| **Bayes' theorem** | The formula for going from prior + likelihood → posterior |
+| **Base rate** | The unconditional probability of something (the "prior" in Bayes language) |
+| **Frequentist** | Probability = long-run frequency over many repetitions |
+| **Bayesian** | Probability = degree of belief, updated with evidence |
+| **Combination** | Number of unordered ways to pick k items from n: C(n,k) |
+| **Permutation** | Number of ordered arrangements: P(n,k) |
+| **Naive Bayes** | A spam-filter style ML classifier built on Bayes' theorem + an "independence" simplification |
+| **Total probability** | P(B) = P(B\|A)P(A) + P(B\|A̅)P(A̅) — sums all paths to event B |
+
+## Further reading
+- Next: [04-distributions.md](04-distributions.md) — distributions are how probabilities scale up across many outcomes
+- Later: [../03-inferential/02-hypothesis-testing.md](../03-inferential/02-hypothesis-testing.md) — p-values are conditional probabilities in disguise
+- Naive Bayes ML use: [../../06-machine-learning/02-classification/04-naive-bayes.md](../../06-machine-learning/02-classification/04-naive-bayes.md)

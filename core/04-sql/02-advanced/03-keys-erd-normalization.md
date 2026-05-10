@@ -7,6 +7,73 @@
 
 ---
 
+## In one sentence
+**Keys** identify rows and connect tables, an **ERD** is the diagram showing how those connections flow, and **normalization** is the discipline of splitting data so the same fact is stored in exactly one place.
+
+## Real-world analogy
+Imagine a library. Every book has a **call number** (primary key) — unique, never reused. The lending log uses that call number to point to the book it lent (foreign key). The **ERD** is the floor plan showing where the books, members, and loans connect. **Normalization** is why you don't paste a member's full address onto every loan slip — you write it once on their member card and reference it.
+
+## The intuition (plain English)
+A row needs a unique handle so you can find it again — that's the **primary key**. When one table needs to point at a row in another (orders -> customer), it stores that handle as a **foreign key**. The database can then enforce "no orphans" automatically. Normalization is the discipline of making sure each fact (customer name, product price) lives in exactly one row, in exactly one table — so updating it doesn't leave inconsistent copies. The classic levels (1NF, 2NF, 3NF) are progressive checks against three specific anomalies. After 3NF, most schemas are good enough.
+
+## Mini worked example — splitting a denormalized table
+
+You start with a single ugly table:
+
+```
+order_id | customer_name | customer_email     | product   | qty | price
+---------+---------------+--------------------+-----------+-----+------
+     101 | Alice         | alice@example.com  | Pen       |   3 |  2.00
+     102 | Alice         | alice@example.com  | Notebook  |   1 |  6.00
+     103 | Bob           | bob@example.com    | Pen       |   5 |  2.00
+```
+
+Problems: if Alice changes her email, you must update two rows. If she has no orders, she can't exist. If you delete order 102 and 101, Alice disappears entirely. These are the **update / insertion / deletion anomalies**.
+
+Normalize into three tables:
+
+```
+customers                  products              orders
+id | name  | email          id | name     | price   id | customer_id | product_id | qty
+---+-------+-----------     ---+----------+------   ---+-------------+------------+----
+ 1 | Alice | alice@x.com     1 | Pen      | 2.00    101|           1 |          1 |   3
+ 2 | Bob   | bob@x.com       2 | Notebook | 6.00    102|           1 |          2 |   1
+                                                    103|           2 |          1 |   5
+```
+
+Now Alice's email lives in one place; pricing lives in one place; orders point at both with foreign keys. To recover the wide view, you JOIN.
+
+## At-a-glance — the schema you just built
+
+```mermaid
+erDiagram
+    customers ||--o{ orders : "places"
+    products  ||--o{ orders : "appears in"
+    customers {
+        int id PK
+        string name
+        string email
+    }
+    products {
+        int id PK
+        string name
+        decimal price
+    }
+    orders {
+        int id PK
+        int customer_id FK
+        int product_id FK
+        int qty
+    }
+```
+
+## Why this matters
+- Normalized OLTP schemas prevent contradictions and make updates safe.
+- Most ML training data is built by JOINing several normalized tables — this is the upstream story to [../../06-machine-learning/01-foundations/05-preprocessing-encoding.md](../../06-machine-learning/01-foundations/05-preprocessing-encoding.md).
+- Reading an ERD is half the job in any new analytics role — it shows you the join paths before you write a single query.
+
+---
+
 ## 1. Primary Keys (PK)
 
 A **primary key** uniquely identifies each row.
@@ -251,3 +318,45 @@ This schema is in **3NF**, with full referential and domain integrity.
 - [ ] What does `ON DELETE CASCADE` do?
 - [ ] Why would I snapshot `unit_price` in `order_items`?
 - [ ] Draw an ERD for: `users`, `posts`, `comments`, `tags`, `post_tags`.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Primary key (PK)** | The column (or combination) that uniquely identifies each row. Always indexed and `NOT NULL` |
+| **Foreign key (FK)** | A column that points to another table's primary key — enforces referential integrity |
+| **Surrogate key** | An artificial PK column like `id INT AUTO_INCREMENT` — recommended default |
+| **Natural key** | A real-world value used as PK (email, SSN). Risky if it can change |
+| **Composite key** | A primary key made of two or more columns combined |
+| **UNIQUE** | Constraint forcing every value in a column (or set) to be distinct |
+| **NOT NULL** | "This column is required — missing values rejected" |
+| **CHECK** | Constraint that rejects rows violating a condition (e.g., `quantity > 0`) |
+| **Referential integrity** | The guarantee that a foreign key always points to an existing parent row |
+| **ON DELETE CASCADE** | When the parent row is deleted, child rows are deleted too |
+| **ON DELETE SET NULL** | Child rows survive but their FK column becomes NULL |
+| **ON DELETE RESTRICT** | Default — block the parent delete while children exist |
+| **ERD (Entity Relationship Diagram)** | A picture of tables and the relationships between them |
+| **Entity** | A "thing" in your domain — a customer, a product, an order |
+| **Cardinality** | How many rows on each side of a relationship: 1:1, 1:N, N:M |
+| **Junction table** | A small table that turns a many-to-many into two one-to-many relationships |
+| **Crow's foot notation** | The standard ERD style with branching lines that show "many" |
+| **Normalization** | Splitting data so each fact lives in exactly one place |
+| **1NF** | "Atomic columns, no repeating groups" — no comma-separated lists in a single cell |
+| **2NF** | "No partial dependency on part of a composite PK" |
+| **3NF** | "No transitive dependency" — non-key columns shouldn't depend on other non-key columns |
+| **BCNF** | A stricter form of 3NF — rarely needed in practice |
+| **Denormalization** | Intentionally adding redundancy back, for read speed (common in warehouses) |
+| **Update anomaly** | Having to change the same fact in many rows because it was duplicated |
+| **Insertion anomaly** | Can't add a new entity without inventing dummy values for unrelated columns |
+| **Deletion anomaly** | Removing a row accidentally erases unrelated information |
+| **Snapshot column** | A column that records a value at a point in time (e.g., `unit_price` on an order) — preserved even if the source value changes later |
+| **Star schema** | A denormalized analytical pattern with one fact table joined to several dimensions |
+| **Data integrity** | The collection of constraints (types, PK, FK, CHECK) that keep data valid |
+
+## Further reading
+- Next: [04-dml-statements.md](04-dml-statements.md) — actually inserting / updating with these constraints in place
+- Star schema deep dive: [05-data-warehouse-etl.md](05-data-warehouse-etl.md) — when denormalization is the right choice
+- ML data prep: [../../06-machine-learning/01-foundations/05-preprocessing-encoding.md](../../06-machine-learning/01-foundations/05-preprocessing-encoding.md) — joining normalized tables into a feature matrix
+- Style guide: [../../../BEGINNER-STYLE-GUIDE.md](../../../BEGINNER-STYLE-GUIDE.md)

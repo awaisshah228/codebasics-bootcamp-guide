@@ -5,6 +5,81 @@
 
 ---
 
+## In one sentence
+An **API** is a contract that lets one program ask another for data over HTTP — you call other people's APIs with `requests`, and you build your own with **FastAPI**, which auto-generates Swagger docs from your Python type hints.
+
+## Real-world analogy
+Think of a restaurant. You (the client) read the **menu** (the API docs), tell the **waiter** (HTTP) your order with the right wording (request), and the **kitchen** (the server) prepares it and sends back food (response). REST verbs (GET, POST, PUT, DELETE) are like ordering categories — "I want to see," "I want to add," "I want to replace," "I want to cancel." Status codes (200 OK, 404 not found) are the waiter telling you whether the kitchen could fulfill the order.
+
+## The intuition (plain English)
+On the consuming side, `requests.get(url)` returns a response object — check `r.status_code`, parse `r.json()`, always pass `timeout=10`. On the building side, FastAPI lets you write `@app.get("/users/{user_id}")` over a typed Python function and it handles routing, validation, and docs for you. **Pydantic** models describe request and response shapes; bad inputs return `422` automatically. Visit `/docs` after starting the server for an interactive Swagger UI you can demo to anyone.
+
+## Mini worked example
+Build a tiny API and call it:
+
+```python
+# server.py
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class Expense(BaseModel):
+    amount: float
+    category: str
+
+@app.post("/expenses")
+def add(expense: Expense):
+    # FastAPI validated the body for you
+    return {"received": expense, "id": 1}
+
+# Run:  uvicorn server:app --reload
+# Open: http://localhost:8000/docs
+```
+
+```python
+# client.py
+import requests
+r = requests.post(
+    "http://localhost:8000/expenses",
+    json={"amount": 250.0, "category": "Food"},
+    timeout=10,
+)
+r.raise_for_status()
+print(r.json())          # {'received': {'amount': 250.0, 'category': 'Food'}, 'id': 1}
+```
+
+A typed model, a route, a request — that is the whole HTTP loop.
+
+## At-a-glance — the request/response cycle
+
+```
+   Client (your script / browser / mobile)
+       │
+       │   GET /users/42    Authorization: Bearer ...
+       ▼
+   ┌─────────────────────────────┐
+   │  FastAPI (uvicorn server)   │
+   │   1. parse path + query     │
+   │   2. validate body via      │
+   │      Pydantic               │
+   │   3. run your function      │
+   │   4. serialize return       │
+   │      to JSON                │
+   └─────────────────────────────┘
+       │
+       │   200 OK    {"id": 42, "name": "Awais"}
+       ▼
+   Client gets the JSON
+```
+
+## Why this matters
+- Every job interaction with a backend speaks HTTP — `requests` is unavoidable.
+- FastAPI is the modern Python framework of choice — fast, typed, auto-documented.
+- The expense tracker (Project 2) and ML model deployment both ride on these patterns.
+
+---
+
 ## 1. What is an API
 
 **API** = Application Programming Interface. A contract that lets one program talk to another.
@@ -273,3 +348,51 @@ Now `GET /gh/codebasics` returns a clean summary.
 - [ ] How do I auto-generate API docs in FastAPI?
 - [ ] Write a FastAPI endpoint `POST /users` accepting `{name, email}` validated by Pydantic.
 - [ ] How do I store an API key safely (not in code)?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **API** (Application Programming Interface) | A contract for one program to talk to another |
+| **REST API** | A web API using URLs + HTTP verbs to expose resources |
+| **HTTP** | The protocol of the web |
+| **HTTPS** | HTTP encrypted with TLS |
+| **Endpoint** | One URL the server responds to (`/users/42`) |
+| **Verb / method** | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` |
+| **Path parameter** | Part of the URL — `/users/{user_id}` |
+| **Query parameter** | After the `?` — `/search?q=python` |
+| **Request body** | JSON payload for POST/PUT/PATCH |
+| **Response body** | What the server returns — usually JSON |
+| **Status code** | 2xx success, 3xx redirect, 4xx client error, 5xx server error |
+| **`200 OK`** | Successful response |
+| **`201 Created`** | Resource created |
+| **`400 Bad Request`** | Client sent something invalid |
+| **`401 Unauthorized` / `403 Forbidden`** | Auth missing or rejected |
+| **`404 Not Found`** | URL or resource does not exist |
+| **`422 Unprocessable Entity`** | Validation failed (FastAPI default for Pydantic errors) |
+| **`500 Internal Server Error`** | Server crashed |
+| **Headers** | Key-value metadata attached to a request/response |
+| **Authorization header** | `Authorization: Bearer <token>` — how most APIs auth you |
+| **API key** | A secret string identifying your app |
+| **Bearer token / JWT** | A signed token you present in the Authorization header |
+| **`requests` library** | The standard Python HTTP client |
+| **`r.json()`** | Parse the response body as JSON |
+| **`r.raise_for_status()`** | Raise an exception on 4xx/5xx |
+| **Session** | Reusable connection + auth across calls |
+| **Timeout** | Maximum seconds to wait — always set this |
+| **FastAPI** | Modern Python web framework using type hints |
+| **uvicorn** | The ASGI server that runs FastAPI |
+| **Swagger / OpenAPI** | The standard API description spec |
+| **`/docs`** | FastAPI's auto-generated Swagger UI |
+| **Pydantic model** | A class describing the shape and constraints of data |
+| **Dependency injection** | FastAPI's `Depends(...)` — share setup like DB connections |
+| **`async def`** | Asynchronous function — can `await` I/O without blocking |
+| **`.env` file** | Dotfile for environment variables, never committed |
+| **`python-dotenv`** | Loads `.env` into `os.environ` |
+
+## Further reading
+- Storage + tests + Pydantic: [04-logging-pytest-pydantic-mysql.md](04-logging-pytest-pydantic-mysql.md)
+- The expense tracker uses these directly: [../02-projects/02-expense-tracker.md](../02-projects/02-expense-tracker.md)
+- ML deployment via FastAPI: [../../06-machine-learning/05-lifecycle-mlops/README.md](../../06-machine-learning/05-lifecycle-mlops/README.md)

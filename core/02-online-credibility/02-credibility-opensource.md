@@ -5,6 +5,23 @@
 
 ---
 
+## In one sentence
+**Online credibility** is the trail of public artifacts (LinkedIn, GitHub, blog) that does the job-hunting *for* you — and contributing to open-source projects, even tiny doc fixes, is the highest-credibility-per-effort move you can make as a beginner.
+
+## The 3-step framework — at-a-glance
+
+```mermaid
+flowchart LR
+    Start[Where you are now] --> S1[Step 1: Be findable<br/>LinkedIn · GitHub · portfolio]
+    S1 --> S2[Step 2: Credible at first glance<br/>headshot · headline · pinned projects<br/>recruiter has 7 seconds]
+    S2 --> S3[Step 3: Compound — post weekly<br/>30 weekly posts > 1 polished post]
+    S3 --> R[Recruiters find YOU<br/>via search and inbound DMs]
+```
+
+You can't shortcut step 3. The first 10 posts feel pointless; consistency is what wins.
+
+---
+
 ## The pitch
 
 You are competing against thousands of other applicants for every entry-level role. Your **resume + cover letter** is one signal. Your **online footprint** is a stronger one. The footprint is built deliberately — not accidentally.
@@ -162,3 +179,33 @@ Connect *with a personal note*, not the default LinkedIn message.
 - [ ] Have I starred at least 5 GitHub repos I might contribute to?
 - [ ] Have I followed at least 5 of the recommended people on LinkedIn?
 - [ ] Have I commented thoughtfully on at least one post this week?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Online credibility** | The publicly verifiable trail of your work — LinkedIn, GitHub, portfolio, blog |
+| **Findable** | Step 1 of credibility: you appear in Google + LinkedIn search for your name + role |
+| **Compounding (posts)** | Each post helps the next — discoverability + followers + referrals all stack |
+| **Niche** | A specific domain you specialize in (retail forecasting > generic data science) |
+| **Pinned project** | A repo highlighted at the top of your GitHub profile (max 6 allowed) |
+| **OSS (Open Source Software)** | Code with a public license that anyone can read, use, and contribute to |
+| **good first issue** | GitHub label for issues maintainers consider beginner-friendly |
+| **PR (Pull Request)** | A proposed code change submitted to a repo for review |
+| **Fork** | Your own copy of someone else's repo, where you can experiment without affecting theirs |
+| **Branch** | A parallel line of work inside a repo |
+| **CONTRIBUTING.md** | The "house rules" file for contributing to a project — read before submitting a PR |
+| **Maintainer** | The volunteer(s) who review PRs and steer the project's direction |
+| **Green-square trail** | The GitHub contributions calendar — recruiters notice consistent activity |
+| **Inbound** | Recruiters reaching out to you (vs. you applying) — outcome of credibility done right |
+| **Engagement** | Comments + reactions on others' posts — accelerates your own reach |
+| **Loom video** | A quick screen-recording with voiceover — high-credibility project demo format |
+| **Featured section (LinkedIn)** | A profile area where you pin links/posts/articles |
+| **Skill Assessment (LinkedIn)** | Free badge tests for Python, SQL, etc. that boost profile visibility |
+
+## Further reading
+- Next: [03-linkedin-profile-banner.md](03-linkedin-profile-banner.md)
+- GitHub mechanics deep dive: [../03-build-in-public/02-git-fundamentals.md](../03-build-in-public/02-git-fundamentals.md)
+- OSS contribution flow: [../03-build-in-public/05-finding-oss-projects.md](../03-build-in-public/05-finding-oss-projects.md)

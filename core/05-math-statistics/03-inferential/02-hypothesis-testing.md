@@ -10,6 +10,93 @@
 
 ---
 
+## In one sentence
+**Hypothesis testing** is a court procedure: you assume "no effect" is true (H₀), look at the data, and ask *"how rare would this evidence be if H₀ were really true?"* — if rare enough, you reject H₀.
+
+## Real-world analogy
+Think of hypothesis testing as a **courtroom**:
+- **H₀ (null)** = "The defendant is innocent" — the default assumption
+- **H₁ (alternative)** = "The defendant is guilty" — what the prosecution wants to prove
+- **Evidence** = your data
+- **p-value** = "If the defendant were really innocent, how likely is this evidence?"
+- **α (0.05)** = the bar for "beyond reasonable doubt"
+- **Type I error** = convicting an innocent person (false positive)
+- **Type II error** = letting a guilty person walk (false negative)
+
+You never *prove* innocence — you can only fail to disprove it. Same in statistics.
+
+## The intuition (plain English)
+1. State a **boring default** (H₀) — usually "no effect, no difference."
+2. Collect data.
+3. Compute how surprising the data is **assuming H₀ is true** → that's the **p-value**.
+4. If p-value is below your tolerance threshold (usually 0.05), reject H₀.
+5. Otherwise, the data isn't strong enough — *fail to reject* H₀ (not the same as proving it).
+
+That's the whole game. Different tests (Z, t, chi-squared) just compute the p-value differently for different data types.
+
+## Mini worked example — is the new ad better?
+
+You run an old ad for a week and a new ad for a week. Conversions:
+```
+Old ad:   500 clicks of 10,000 visitors  → 5.0% conversion
+New ad:   600 clicks of 10,000 visitors  → 6.0% conversion
+```
+
+The new ad is 1pp better. But is it a *real* effect or random noise?
+
+**Setup:**
+- H₀: new ad = old ad (the 1pp lift is just luck)
+- H₁: new ad ≠ old ad
+- α = 0.05
+
+**Compute the test (two-proportion Z-test):**
+```
+pooled rate    = (500 + 600) / 20000  = 0.055
+SE             = √[ 0.055 × 0.945 × (1/10000 + 1/10000) ]  ≈ 0.00322
+z              = (0.06 − 0.05) / 0.00322  ≈ 3.10
+p-value        ≈ 0.0019
+```
+
+Since p (0.0019) < α (0.05), **reject H₀**. The 1pp lift is real, not chance.
+
+But wait — is 1pp **practically** meaningful? That's where **effect size** comes in. p-value tells you *if* the effect exists; effect size tells you *how big* it is. Both matter.
+
+## At-a-glance — pick the right test
+
+```mermaid
+flowchart TB
+    Start[Hypothesis test question] --> What{Comparing what?}
+    What -- "1 mean vs known value (large n)" --> Z[One-sample Z-test]
+    What -- "1 mean, small n / σ unknown" --> T1[One-sample t-test]
+    What -- "2 group means" --> T2[Two-sample t-test<br/>Welch's variant if variances differ]
+    What -- "before / after same subjects" --> Tp[Paired t-test]
+    What -- "2 conversion rates / proportions" --> Zp[Two-proportion Z-test]
+    What -- "categorical: observed vs expected counts" --> CGF[Chi-squared goodness-of-fit]
+    What -- "categorical: 2 variables related?" --> CI[Chi-squared independence]
+```
+
+## The four numbers you must always report
+
+| Number | What it means |
+|--------|---------------|
+| **p-value** | "How surprising is the data under H₀?" — small = reject H₀ |
+| **Effect size** (e.g., Cohen's d, lift) | "How big is the difference?" — independent of sample size |
+| **Confidence interval** | "What's the plausible range for the true effect?" |
+| **Sample size / power** | "Were we equipped to detect this effect?" — pre-computed before running the test |
+
+A "p < 0.05" alone is **not** a complete result. Always pair it with the other three.
+
+## Common traps that cost real money
+
+- **Peeking**: stopping the A/B test the moment p < 0.05 → inflates your Type I rate (you'll see false wins).
+- **Multiple metrics**: testing 20 metrics at α=0.05 → you expect 1 false positive *just by chance*.
+- **Huge samples + tiny effects**: a 0.1% lift becomes "highly significant" but worthless to your business.
+- **One-sided tests after seeing the data**: post-hoc cherry-picking masquerading as analysis.
+
+If you internalize one thing from this chapter: **statistical significance ≠ practical significance**.
+
+---
+
 ## 1. The framework — what hypothesis testing actually does
 
 You have a claim ("the new ad performs better than the old"). You collect data. The data shows *some* difference. **Is the difference real, or could it have happened by chance?**
@@ -312,3 +399,44 @@ This is the bridge from this chapter to a real-world deliverable.
 - [ ] Why is "peeking" at A/B test results a problem?
 - [ ] Compute required n for an A/B test with baseline 10% conversion, MDE +2pp, 80% power, α 0.05.
 - [ ] How does this connect back to AtliQo Phase 2?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Hypothesis test** | A formal procedure for deciding whether observed data contradicts a default assumption |
+| **H₀ (null hypothesis)** | The "boring default" — usually "no effect, no difference, no change" |
+| **H₁ (alternative)** | The thing you'd like to prove — the opposite of H₀ |
+| **Reject H₀** | The data is too surprising under H₀; we conclude H₁ is more credible |
+| **Fail to reject H₀** | Not enough evidence to overturn H₀ — *not* the same as "H₀ is true" |
+| **One-sided test** | "A is greater than B" (direction specified upfront) |
+| **Two-sided test** | "A differs from B" (either direction). Default unless you have a reason. |
+| **Type I error (α)** | False positive: rejecting H₀ when it's actually true. Usually capped at 5%. |
+| **Type II error (β)** | False negative: failing to reject H₀ when H₁ is actually true |
+| **Power (1 − β)** | The chance of detecting a real effect. Industry default: 80%. |
+| **p-value** | "Assuming H₀ is true, the probability of seeing data this extreme (or more)" |
+| **α (significance level)** | The cutoff for p-value. Reject H₀ if p < α. Common: 0.05. |
+| **Test statistic** | A number (z, t, χ²) summarizing how far the data is from H₀ |
+| **Critical value** | The boundary value; if test statistic crosses it, we reject H₀ |
+| **Rejection region** | The range of test-statistic values for which we'd reject H₀ |
+| **Z-test** | Hypothesis test using the Standard Normal — works for known σ or large n |
+| **t-test** | Z-test's small-sample sibling — uses t-distribution to handle estimated σ |
+| **Welch's t-test** | Two-sample t-test that doesn't require equal variances |
+| **Paired t-test** | Compares before/after on the *same* subjects |
+| **Chi-squared (χ²) test** | For categorical data — tests fit to expected counts or independence between two categoricals |
+| **Goodness-of-fit (χ²)** | Does this categorical distribution match what we expected? |
+| **Test of independence (χ²)** | Are these two categorical variables related? |
+| **Effect size** | A scale-free measure of magnitude (e.g., Cohen's d) — independent of sample size |
+| **Cohen's d** | Standardized mean difference. 0.2 = small, 0.5 = medium, 0.8 = large. |
+| **A/B test** | A randomized controlled experiment online — the gold standard for causal claims |
+| **MDE (Minimum Detectable Effect)** | The smallest effect size your test is designed to detect with given power |
+| **Peeking** | Checking results before the planned end and stopping early — inflates false-positive rate |
+| **Bonferroni correction** | When testing many things, divide α by the number of tests to control overall false-positive rate |
+| **Statistical significance ≠ practical significance** | A real effect can still be too small to matter |
+
+## Further reading
+- Previous: [01-central-limit-theorem.md](01-central-limit-theorem.md) — the math making all this possible
+- AtliQo Bank context: [../02-atliqo-bank-project/02-phase-1-find-target-market.md](../02-atliqo-bank-project/02-phase-1-find-target-market.md)
+- ML application: [../../06-machine-learning/02-classification/02-classification-metrics.md](../../06-machine-learning/02-classification/02-classification-metrics.md) (precision/recall use the same Type I/II framing)

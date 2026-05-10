@@ -7,6 +7,71 @@
 
 ---
 
+## In one sentence
+**Cross-validation** averages your model's performance across multiple train/validation splits so a single lucky split can't fool you, and **hyperparameter tuning** systematically tries different model settings to find the best one.
+
+## Real-world analogy
+Suppose you want to know "is this restaurant good?" You could go once and judge — but one bad chef night gives you a misleading verdict. So you visit five times, on different days, and average. That's cross-validation. Now suppose you also want to know "should I order spicy or mild, large or small?" You try every combo across those five visits and pick the one with the best average. That's hyperparameter tuning.
+
+## The intuition (plain English)
+1. A single train/test split is high-variance — your one number depends on which rows happened to be in the test set.
+2. **k-fold cross-validation** rotates the held-out chunk across k splits and averages → much more stable estimate.
+3. **Stratified k-fold** keeps the class proportions consistent across folds — essential for classification.
+4. **Hyperparameters** (max_depth, learning_rate, alpha, …) aren't learned from data — you set them. CV is how you compare different settings honestly.
+5. Strategies, fastest to slowest: random search > grid search; Bayesian optimization (Optuna) for the last 1–2%.
+
+## Mini worked example — choosing `max_depth` for a Random Forest
+
+```
+Data: 1,000 rows, 5-fold CV.
+
+For each candidate max_depth, fit 5 models (each on 800 rows), score on the held-out 200.
+
+max_depth=3   fold scores: [0.81, 0.79, 0.83, 0.80, 0.78]   mean=0.80, std=0.018
+max_depth=5   fold scores: [0.86, 0.84, 0.87, 0.85, 0.85]   mean=0.85, std=0.010
+max_depth=10  fold scores: [0.87, 0.83, 0.88, 0.84, 0.85]   mean=0.85, std=0.019
+max_depth=20  fold scores: [0.84, 0.80, 0.85, 0.81, 0.82]   mean=0.82, std=0.019
+```
+
+`max_depth=5` is tied for the best mean (0.85) and has lower std — pick it. This is more honest than "max_depth=10 won my single split".
+
+## At-a-glance — split strategies
+
+```
+plain k-fold (k=5):
+fold 1:  [TEST]  TRAIN  TRAIN  TRAIN  TRAIN
+fold 2:  TRAIN  [TEST]  TRAIN  TRAIN  TRAIN
+fold 3:  TRAIN  TRAIN  [TEST]  TRAIN  TRAIN
+fold 4:  TRAIN  TRAIN  TRAIN  [TEST]  TRAIN
+fold 5:  TRAIN  TRAIN  TRAIN  TRAIN  [TEST]
+        score = mean of 5 test scores
+```
+
+```mermaid
+flowchart TB
+    Q[Picking a CV strategy] --> Q1{Data type?}
+    Q1 -- "iid classification" --> SK[StratifiedKFold]
+    Q1 -- "iid regression" --> KF[KFold]
+    Q1 -- "time series" --> TS[TimeSeriesSplit<br/>train on past only]
+    Q1 -- "multiple rows per user" --> GK[GroupKFold<br/>users don't span folds]
+    SK --> Tune[Tune hyperparams via:]
+    KF --> Tune
+    TS --> Tune
+    GK --> Tune
+    Tune --> Grid[GridSearchCV<br/>exhaustive]
+    Tune --> Rand[RandomizedSearchCV<br/>faster]
+    Tune --> Op[Optuna<br/>Bayesian, smartest]
+```
+
+## Why this matters
+- **A single train/test split is unreliable** — your "85% accuracy" might be 78% or 91% on a different split.
+- **Tuning without CV silently overfits to the validation set** — your final number lies.
+- **Stratified folds for imbalanced classification** prevent fold-to-fold class swings that wreck your average.
+- **Time-series and grouped data have leakage traps** plain k-fold doesn't catch.
+- **Pipelines + GridSearchCV** let you tune preprocessing and model together — the safest workflow.
+
+---
+
 ## 1. Why cross-validation
 
 A single train/test split has variance — your one test number could be lucky/unlucky. Cross-validation averages over multiple splits → **more stable, more honest** performance estimate.
@@ -247,3 +312,43 @@ Don't grid-search 5 hyperparameters with 5 values each on day one — that's 3,1
 - [ ] When use Optuna over RandomizedSearchCV?
 - [ ] What's nested CV and when do you need it?
 - [ ] Walk through tuning a pipeline `[StandardScaler, LogisticRegression]`.
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Cross-validation (CV)** | Average performance across multiple train/val splits — more stable than one split |
+| **Fold** | One of the equal-size chunks the data is split into |
+| **k-fold CV** | Split into k chunks; rotate which one is held out; average k scores |
+| **Stratified k-fold** | k-fold that preserves class proportions in each fold (for classification) |
+| **TimeSeriesSplit** | CV that always trains on the past and tests on the future |
+| **GroupKFold** | CV that keeps related rows (same user/customer) on the same side of the split |
+| **`shuffle=True`** | Randomize row order before splitting — crucial when data has ordering |
+| **`random_state`** | Seed for reproducibility — always set it |
+| **Train/val/test split** | Three-way split: train fits, val tunes, test reports final number |
+| **Held-out / hold-out** | Data set aside that the model never sees during tuning |
+| **Hyperparameter** | A model knob you set before training (max_depth, learning_rate, alpha, C) |
+| **Hyperparameter tuning** | Searching for the best hyperparameters via CV |
+| **Grid search** | Try every combo on a fixed grid — exhaustive but explodes combinatorially |
+| **Random search** | Sample combos at random — usually finds near-optimal much faster than grid |
+| **Bayesian optimization** | Smart search that models the loss surface to pick promising configs |
+| **Optuna** | Modern Bayesian-style hyperparameter library — Kaggle/production default |
+| **`GridSearchCV`** | sklearn class for grid search with built-in CV |
+| **`RandomizedSearchCV`** | sklearn class for random search with built-in CV |
+| **Nested CV** | Inner CV picks hyperparams; outer CV reports honest performance |
+| **Cross-validate score** | Mean ± std across folds — always report both |
+| **`cross_val_score`** | sklearn function returning per-fold scores |
+| **`cross_validate`** | Like `cross_val_score` but returns multiple metrics + train scores |
+| **Pipeline** | Wraps preprocessing + model so CV applies them correctly per fold |
+| **`<step>__<param>` syntax** | sklearn's pipeline parameter naming (e.g., `clf__C`) for grid search |
+| **Early stopping** | Boosting / NN trick that uses a validation set to auto-stop training |
+| **Leakage** | Validation info bleeding into training — produces fake-good scores |
+
+## Further reading
+- Previous: [02-boosting-adaboost-gbm-xgb.md](02-boosting-adaboost-gbm-xgb.md)
+- Next module: [../04-unsupervised/01-clustering-kmeans.md](../04-unsupervised/01-clustering-kmeans.md)
+- Pipeline + ColumnTransformer foundations: [../01-foundations/05-preprocessing-encoding.md](../01-foundations/05-preprocessing-encoding.md)
+- Overfit/underfit context: [../01-foundations/06-overfit-underfit-bias-variance.md](../01-foundations/06-overfit-underfit-bias-variance.md)
+- Used in every project: [../06-projects/](../06-projects/)

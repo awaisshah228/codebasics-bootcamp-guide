@@ -1,5 +1,52 @@
 # Session 5 — Finding Open-Source Projects to Contribute On
 
+## In one sentence
+**3 small merged PRs** to real OSS projects de-risks the "have you ever worked in a team codebase?" interview question — and finding them is mostly a labels-and-search exercise, not a talent one.
+
+## Real-world analogy
+Think of OSS contribution as **stepping into someone else's kitchen** to help cook. You don't barge in and rebuild the menu — you start by washing one dish (typo fix), watching the head chef's rules (CONTRIBUTING.md), then offering to help with a small task (good-first-issue ticket). After 3 dishes done well, you're trusted with bigger work.
+
+## Mini worked example — your 30-day OSS plan
+
+```
+Week 1: Pick 3 candidate repos at 3 difficulty levels.
+        Star them. Read README + CONTRIBUTING.md.
+
+Week 2: Find 5 'good first issue' tickets.
+        Shortlist 1. Comment to claim it.
+
+Week 3: Set up dev env, run tests locally,
+        open your first PR.
+
+Week 4: Address review feedback, get merged.
+        Start the next issue while waiting.
+
+Result: 1 merged PR + 1 in-flight + a LinkedIn post about it.
+```
+
+## At-a-glance — where to look
+
+```mermaid
+flowchart TB
+    Start[Find a repo to contribute to] --> Stage{Your stage in bootcamp}
+    Stage -- Beginner --> Easy[Easy:<br/>Codebasics own repos<br/>· typos in popular READMEs<br/>· goodfirstissues.com]
+    Stage -- Intermediate --> Mid[Medium:<br/>Streamlit · FastAPI<br/>Pydantic · DVC · MLflow]
+    Stage -- Advanced --> Hard[Stretch:<br/>pandas · scikit-learn<br/>LangChain · Hugging Face]
+    Easy --> Issue[Filter by:<br/>label:'good first issue'<br/>label:'documentation']
+    Mid --> Issue
+    Hard --> Issue
+    Issue --> Claim[Comment to claim<br/>before coding]
+    Claim --> PR[Open small PR<br/>follow CONTRIBUTING]
+```
+
+## Why this matters
+- **Resume gold**: "Contributed to scikit-learn" works far harder than "I built a tutorial project."
+- **Real workflow**: forks, branches, PRs, code review = exactly what a real job uses.
+- **Network**: maintainers become contacts; some have hired contributors directly.
+- **Confidence**: surviving your first review feedback is a one-way door — you'll never fear PRs again.
+
+---
+
 ## Why OSS contributions matter for your job hunt
 
 A merged PR — even a tiny one — does several things at once:
@@ -210,3 +257,35 @@ After 30 days you have your first OSS line on the resume.
 - [ ] I've opened my first PR (even a typo fix)
 - [ ] I've posted about my first OSS contribution publicly
 - [ ] I have a 30-day plan for the next 3 contributions
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **OSS (Open Source Software)** | Code released under a license that allows anyone to read, use, and contribute |
+| **`good first issue`** | GitHub label maintainers use for beginner-friendly tickets |
+| **`help wanted`** | Issues where the maintainer is open to outside contributors |
+| **`hacktoberfest`** | Annual October event encouraging OSS contributions; great for first-timers |
+| **CONTRIBUTING.md** | Project's rules-of-the-house file — read before opening a PR |
+| **CODE_OF_CONDUCT.md** | Community behavior expectations |
+| **Maintainer** | The volunteer(s) running the project — often unpaid |
+| **Fork** | Your own copy of a repo on GitHub where you experiment |
+| **Upstream** | The original repo you forked from |
+| **Claim (an issue)** | Comment "I'd like to work on this" before coding to avoid duplicates |
+| **Triage** | The work of sorting / labeling / closing duplicate issues |
+| **CodeQL / Codescene** | Automated tools projects use to scan PRs for issues |
+| **Sebastián Ramírez** | Creator of FastAPI; famously friendly to first-time contributors |
+| **goodfirstissues.com** | Aggregator site for fresh good-first-issue tickets across many repos |
+| **up-for-grabs.net** | Browse OSS by language and project for beginner work |
+| **firsttimersonly.com** | Curated list of beginner-friendly OSS projects |
+| **Closes #N** | PR description phrase that auto-closes issue N when merged |
+| **CI failing** | The automated tests on your PR didn't pass; fix locally and re-push |
+| **Squash and merge** | Most common merge strategy — combines all PR commits into one |
+| **Hacktoberfest swag** | Free T-shirts / stickers for ≥4 merged PRs in October |
+
+## Further reading
+- Recap of git collaboration mechanics: [03-git-collaboration.md](03-git-collaboration.md)
+- Repo polish for showcasing your own projects: [04-github-anatomy.md](04-github-anatomy.md)
+- Posting about your first PR: [01-build-in-public-philosophy.md](01-build-in-public-philosophy.md)

@@ -7,6 +7,67 @@
 
 ---
 
+## In one sentence
+**Fine-tuning** takes a giant pre-trained transformer (BERT, DistilBERT) that already understands language and trains it a little more on *your* labelled examples — getting state-of-the-art accuracy with a few thousand rows and a free Colab GPU.
+
+## Real-world analogy
+Imagine BERT is a college graduate who has read most of Wikipedia and a chunk of the internet. They understand grammar, context, idioms, and how words relate. To use them at your company, you don't re-teach them English — you give them a one-week onboarding on your specific job (movie sentiment, news topics, support-ticket triage). That onboarding is fine-tuning. HuggingFace is the recruiting agency that lets you hire any of 100,000+ such graduates with one line of code.
+
+## The intuition (plain English)
+Training a transformer from scratch costs millions of dollars. But once it's trained, the heavy lifting — knowing English, world facts, syntax — is already done and shared with you for free on the HuggingFace Hub. Fine-tuning swaps in a small classification head and gently adjusts the model's weights with your few thousand labelled examples and a tiny learning rate. The pre-trained brain provides language understanding; the fine-tune phase provides task specialization. Pipelines are a separate idea: a one-line shortcut for using already-fine-tuned models without writing any training code.
+
+## Mini worked example — fine-tune sentiment in 5 lines (the conceptual flow)
+
+Imagine you have 5,000 movie reviews labelled positive / negative.
+
+```
+Step 1: load tokenizer + model with the SAME checkpoint name
+        tok   = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+        model = AutoModelForSequenceClassification.from_pretrained(
+                    "distilbert-base-uncased", num_labels=2
+                )
+
+Step 2: tokenize your reviews
+        "I loved the visuals."   ->  [101, 1045, 3866, ...]   (input_ids)
+                                     [  1,    1,    1, ...]   (attention_mask)
+
+Step 3: hand everything to Trainer with 3 epochs, lr=2e-5
+        trainer.train()
+
+Step 4: ~10 min on a free T4 GPU -> ~92% accuracy
+
+Step 5: predict on a new review
+        clf("This movie was a slow disaster.")  ->  NEGATIVE 0.99
+```
+
+Same five-step pattern works for news topics, spam detection, intent classification — change the dataset and `num_labels`, everything else stays.
+
+## At-a-glance — pipelines vs fine-tuning
+
+```mermaid
+flowchart TB
+    subgraph Quick[Quick path: pipelines]
+        P1[from transformers<br/>import pipeline] --> P2[clf = pipeline 'sentiment-analysis']
+        P2 --> P3[clf 'I love this'<br/>POSITIVE 0.999]
+    end
+    subgraph Custom[Custom path: fine-tune]
+        F1[Load checkpoint<br/>AutoTokenizer + AutoModel] --> F2[Tokenize your dataset]
+        F2 --> F3[Trainer + TrainingArguments]
+        F3 --> F4[trainer.train]
+        F4 --> F5[trainer.save_model<br/>or push_to_hub]
+    end
+    Quick -. "good enough?" .-> Custom
+```
+
+## Why this matters
+- BERT-class fine-tuning is the modern default for production text classification, NER, and QA.
+- One pre-trained checkpoint + a few thousand labels usually beats months of feature engineering.
+- HuggingFace lets you ship your fine-tuned model to the world with `push_to_hub` — instant portfolio piece.
+- Understanding tokenizers (padding, attention masks, special tokens) is the difference between "it works" and "OOM at 3am".
+- LoRA / PEFT extends this same idea to giant LLMs (Llama, Mistral) using 1% of the GPU memory.
+
+---
+
 ## 1. The Hugging Face universe
 
 Three core libraries:
@@ -270,3 +331,66 @@ People can load it with `AutoModel.from_pretrained("myuser/my-imdb-classifier")`
 - [ ] When use LoRA / PEFT?
 - [ ] Push a fine-tuned model to the Hub and load it back.
 - [ ] What's `evaluate` used for?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **HuggingFace Hub** | Online registry of pre-trained models, datasets, and demos |
+| **`transformers`** | HuggingFace library that loads and trains transformer models |
+| **`datasets`** | HuggingFace library for loading benchmark datasets with caching |
+| **`tokenizers`** | Fast Rust-based tokenizer implementations |
+| **`evaluate`** | HuggingFace library of standard metrics (accuracy, F1, BLEU, ROUGE) |
+| **`accelerate`** | HuggingFace library for multi-GPU and mixed-precision training |
+| **Pipeline** | One-line API for inference: `pipeline("sentiment-analysis")` |
+| **Zero-shot classification** | Classify text into labels you didn't train on, by prompting an NLI model |
+| **Pre-training** | The expensive first phase: learn language from billions of words (done by Google / Meta) |
+| **Fine-tuning** | The cheap second phase: adapt a pre-trained model to your task with your data |
+| **Checkpoint** | A saved set of model weights, identified by name like `distilbert-base-uncased` |
+| **BERT** | 2018 transformer trained to predict masked words and next sentences |
+| **DistilBERT** | A 40% smaller, 60% faster student model of BERT — ~95% of the quality |
+| **RoBERTa / ELECTRA / DeBERTa** | Stronger BERT variants from later research |
+| **Encoder-only model** | BERT family — good for understanding tasks (classification, NER, QA) |
+| **Decoder-only model** | GPT family — good for generation |
+| **Encoder-decoder** | T5 / BART — good for translation and summarization |
+| **MLM** (Masked Language Modeling) | The pre-training task: hide some words, predict them |
+| **NSP** (Next Sentence Prediction) | BERT's secondary pre-training task — predicts if sentence B follows A |
+| **`[CLS]` token** | Special token at the start; its hidden state is used for classification |
+| **`[SEP]` token** | Separator between sentences in a pair |
+| **`[PAD]` / `[MASK]` / `[UNK]`** | Padding / masked / unknown special tokens |
+| **`input_ids`** | The token IDs the model actually sees |
+| **`attention_mask`** | A 0/1 array marking which tokens are real vs padding |
+| **`token_type_ids`** | 0 / 1 marking which sentence a token belongs to (for pair inputs) |
+| **Padding** | Adding `[PAD]` tokens to make all sequences in a batch the same length |
+| **Truncation** | Cutting off tokens past `max_length` |
+| **`max_length`** | The hard upper bound on sequence length (often 128, 256, 512) |
+| **Data collator** | Helper that batches and pads tokenized examples on the fly |
+| **`Trainer`** | HuggingFace's high-level training loop |
+| **`TrainingArguments`** | Config object: epochs, batch size, learning rate, save strategy |
+| **Learning rate** | How big each weight update is — `2e-5` is the BERT fine-tune sweet spot |
+| **Warmup ratio** | Fraction of training where LR ramps up from zero |
+| **Weight decay** | A regularization term that pulls weights toward zero |
+| **Epoch** | One full pass over the training data |
+| **Batch size** | How many examples are processed in one forward pass |
+| **Gradient accumulation** | Faking a larger batch by summing gradients over several small batches |
+| **OOM** (Out Of Memory) | GPU ran out of RAM — reduce batch size or `max_length` |
+| **Mixed precision** | Training with float16 instead of float32 to halve memory |
+| **`AutoModel` / `AutoModelForSequenceClassification`** | Auto-loaders that pick the right class for your checkpoint |
+| **Token classification** | Predict a label per token (NER) |
+| **Sequence classification** | Predict one label per whole sequence (sentiment, topic) |
+| **`push_to_hub`** | Upload your fine-tuned model to the HuggingFace Hub |
+| **PEFT** (Parameter-Efficient Fine-Tuning) | Family of techniques that fine-tune only a small subset of weights |
+| **LoRA** (Low-Rank Adaptation) | The most popular PEFT method — train small "adapter" matrices instead of all weights |
+| **Adapter** | A small inserted module trained while the base model stays frozen |
+| **Sentence-transformers** | A library that fine-tunes BERT-class models for sentence embeddings |
+| **`huggingface-cli login`** | Authenticate before pushing to the Hub |
+| **Inference** | Running the model to make predictions (vs training) |
+
+## Further reading
+- Previous: [06-news-classification-spacy.md](06-news-classification-spacy.md) — the comparison context for DistilBERT
+- DL bridge: [BERT in PyTorch](../07-deep-learning/04-sequence/05-bert-huggingface.md), [transformers architecture](../07-deep-learning/04-sequence/03-transformer-architecture.md), [attention](../07-deep-learning/04-sequence/04-attention.md)
+- Earlier sequence models: [RNN](../07-deep-learning/04-sequence/01-rnn.md), [LSTM](../07-deep-learning/04-sequence/02-lstm.md)
+- Deployment: [Streamlit](../07-deep-learning/05-deployment/01-streamlit.md), [FastAPI](../07-deep-learning/05-deployment/02-fastapi.md)
+- Style guide: [BEGINNER-STYLE-GUIDE.md](../../BEGINNER-STYLE-GUIDE.md)

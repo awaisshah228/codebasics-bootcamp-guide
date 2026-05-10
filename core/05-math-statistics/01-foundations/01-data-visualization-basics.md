@@ -10,6 +10,66 @@
 
 ---
 
+## In one sentence
+Charts are how the human eye does statistics — picking the right chart type for your data type is half the battle of any analysis.
+
+## Real-world analogy
+Imagine you walk into a doctor's office. They could either show you a wall of numbers or a single chart of your blood pressure over time. Same data — but the chart is the only one that makes you go *"oh, it's been climbing since March."* Visualization compresses thousands of rows into something your brain can process in 2 seconds.
+
+## The intuition (plain English)
+Two ideas drive every chart choice:
+
+1. **What type of data do I have?**
+   - **Categorical** (labels): "city", "tier", "color" → bar charts, pie (rarely)
+   - **Numerical** (numbers): "price", "age", "latency" → histograms, box plots, scatter
+2. **How many variables am I looking at at once?**
+   - **One** → just the distribution (histogram, bar chart)
+   - **Two** → the relationship (scatter, grouped box)
+   - **Three+** → faceted plots, pair plots, heatmaps
+
+Get those two right and 90% of plotting decisions become automatic.
+
+## Mini worked example — same data, three chart choices
+
+You have monthly sales for 12 months: `[120, 135, 150, 145, 160, 175, 200, 210, 195, 180, 165, 150]`.
+
+| Chart | What it tells you | When to use |
+|-------|-------------------|-------------|
+| **Bar chart** | Which months had highest sales | Comparing 12 specific values |
+| **Line chart** | Sales went up summer, dipped in fall | Showing **trend over time** |
+| **Histogram** | Most months had sales in 150–180 range | Showing the *distribution* of values |
+
+The line chart wins here because the data is **time-ordered**. Picking the bar chart isn't *wrong* but loses the trend story.
+
+## At-a-glance — pick the right chart
+
+```mermaid
+flowchart TB
+    Start[What kind of data?] --> Type{Categorical or numerical?}
+    Type -- 1 categorical --> Bar[Bar chart<br/>or pie if ≤5 slices]
+    Type -- 1 numerical --> Hist[Histogram<br/>+ Box plot]
+    Type -- numerical over time --> Line[Line chart]
+    Type -- 2 numerical --> Scat[Scatter plot]
+    Type -- numerical × categorical --> Box[Box plot grouped<br/>or violin plot]
+    Type -- 2 categorical --> Heat[Heatmap of cross-tab]
+    Type -- 3+ numerical --> Pair[Pair plot<br/>+ correlation heatmap]
+```
+
+## What "reading a chart well" means
+
+Looking at a histogram — you should see four things in two seconds:
+- Where's the **center**? (mean / median)
+- How **spread out**? (skinny vs wide)
+- Is it **symmetric** or **skewed**?
+- Are there **outliers** or **multiple peaks**?
+
+That's the visual version of central tendency, dispersion, skewness, and outliers — which the next files formalize with numbers.
+
+## Why this matters
+Every later chapter starts with "look at the data first." Skipping EDA is the #1 cause of bad ML models, broken A/B tests, and dashboards no one trusts. The plotting skills here are what makes that possible.
+
+---
+
 ## 1. Types of data
 
 ### Categorical (qualitative)
@@ -219,3 +279,40 @@ This EDA pass is the prerequisite to *any* downstream analysis or model.
 - [ ] When is a pie chart appropriate?
 - [ ] Difference between univariate and bivariate analysis?
 - [ ] What's a faceted plot, and when use it?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Categorical data** | Labels with no inherent number meaning (city, color, tier) |
+| **Nominal** | Categorical with no order (gender, country) |
+| **Ordinal** | Categorical with order but no fixed gaps (T-shirt size: S<M<L) |
+| **Numerical data** | Actual numbers you can do math on |
+| **Discrete** | Numerical and countable (number of children, click count) |
+| **Continuous** | Numerical and measurable on a smooth scale (height, latency) |
+| **Univariate** | Looking at one variable at a time |
+| **Bivariate** | Looking at two variables and their relationship |
+| **Multivariate** | Three or more variables together |
+| **Bar chart** | Categorical comparison — one bar per category |
+| **Histogram** | Numerical distribution — bars represent ranges (bins) of values |
+| **Bin** | A range of values lumped together as one bar in a histogram |
+| **Box plot** | Median, IQR, whiskers, outlier markers — robust distribution summary |
+| **Whiskers** | The lines extending out of the box, usually to 1.5 × IQR |
+| **KDE (Kernel Density Estimate)** | A smoothed histogram showing the underlying density curve |
+| **Scatter plot** | Each row is a dot positioned by two numeric columns |
+| **Bubble plot** | Scatter plot where dot size encodes a third variable |
+| **Hexbin / 2D density** | Used when scatter has too many overlapping dots |
+| **Violin plot** | Box plot crossed with KDE — shows full distribution shape per group |
+| **Pair plot** | Grid of scatter plots for every pair of numeric variables |
+| **Heatmap** | Color-coded grid — used for correlation matrices and cross-tabs |
+| **Cross-tab** | A frequency table counting joint occurrences of two categorical variables |
+| **Faceted plot / small multiples** | Same chart repeated across categories (e.g., one scatter per city) |
+| **EDA (Exploratory Data Analysis)** | The "look first, model later" phase — descriptive stats + visualization |
+| **Anti-pattern** | A common mistake that looks reasonable but distorts the message (e.g., 3D pie chart) |
+
+## Further reading
+- Next: [02-central-tendency-dispersion.md](02-central-tendency-dispersion.md) — the *numbers* behind the shapes you see
+- Then: [03-probability-theory.md](03-probability-theory.md) and [04-distributions.md](04-distributions.md)
+- Practical EDA in code: [../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md](../../01-python/01-basics/07-eda-pandas-matplotlib-seaborn.md)

@@ -5,6 +5,83 @@
 
 ---
 
+## In one sentence
+**Attention** is the mechanism that lets each token in a sequence look at every other token, decide *who's most relevant*, and pull a weighted summary of their information — it's the engine inside every Transformer.
+
+## Real-world analogy
+You're at a noisy party trying to understand what your friend is saying. You don't listen to every voice equally — your brain *attends* to the relevant speaker and tunes the rest down. Each token in a Transformer is doing exactly this: deciding who in the room (sequence) it should listen to in order to understand itself.
+
+## The intuition (plain English)
+- Each token is projected into three vectors: **Query** ("what do I want to know?"), **Key** ("what info do I offer?"), **Value** ("what would I actually share?").
+- A token's **attention weights** are the softmax of how well its query matches every other token's key.
+- The token's output is a **weighted sum of all values** — a personalized summary of the whole sequence.
+- **Multi-head attention** runs many of these in parallel so different heads can specialize (subject-verb, coreference, position, etc.).
+
+## Mini worked example — attention for one token
+
+3 tokens in a tiny sequence with `d_k = 2`. Token 2 ("bit") is computing its attention output.
+
+```
+Q for token 2:  q_2 = [1.0,  0.5]
+Keys:           k_0 = [0.2,  0.8]   "the"
+                k_1 = [1.2,  0.4]   "dog"
+                k_2 = [0.5,  0.5]   "bit"
+Values:         v_0 = [0.1, -0.2,  0.3]
+                v_1 = [0.7,  0.6,  0.1]
+                v_2 = [0.0,  0.4, -0.1]
+
+Step 1 — dot products (compatibility scores):
+   q_2 · k_0 = 1.0·0.2 + 0.5·0.8 = 0.60
+   q_2 · k_1 = 1.0·1.2 + 0.5·0.4 = 1.40   ← highest: "bit" cares about "dog"
+   q_2 · k_2 = 1.0·0.5 + 0.5·0.5 = 0.75
+
+Step 2 — scale by sqrt(d_k) = sqrt(2) ≈ 1.414:
+   [0.60, 1.40, 0.75] / 1.414 ≈ [0.42, 0.99, 0.53]
+
+Step 3 — softmax → attention weights:
+   ≈ [0.22, 0.45, 0.33]      (rows sum to 1)
+
+Step 4 — weighted sum of values:
+   out_2 = 0.22·v_0 + 0.45·v_1 + 0.33·v_2
+         = 0.22·[0.1,-0.2,0.3] + 0.45·[0.7,0.6,0.1] + 0.33·[0.0,0.4,-0.1]
+         ≈ [0.34,  0.36,  0.04]
+```
+
+That output replaces "bit"'s embedding for the next layer — heavily flavored by "dog".
+
+## At-a-glance — the attention pipeline
+
+```mermaid
+flowchart LR
+    X[Input embeddings] --> WQ[Project to Q]
+    X --> WK[Project to K]
+    X --> WV[Project to V]
+    WQ --> S[Q dot K-transpose]
+    WK --> S
+    S --> SC[Scale by sqrt d_k]
+    SC --> M[Mask if needed]
+    M --> SM[Softmax]
+    SM --> MUL[Multiply by V]
+    WV --> MUL
+    MUL --> O[Attention output]
+```
+
+```
+   Multi-head:
+
+   X ─► split into 8 heads ─► [attention] each with its own Q/K/V ─► concat ─► linear ─► out
+                                ▲
+                       different heads specialize
+                       (syntax, coreference, position, etc.)
+```
+
+## Why this matters
+- Attention is the single mathematical idea behind GPT, BERT, ChatGPT, ViT, Whisper, AlphaFold.
+- Knowing what Q, K, V represent intuitively unlocks the rest of the Transformer.
+- The O(T²) cost of attention is why "context length" is a major engineering frontier (Flash Attention, sparse attention, state-space models).
+
+---
+
 ## 1. The intuition
 
 When you read a sentence, you don't process every word with equal attention. To understand "the dog **bit** the man," "bit" depends heavily on "dog" (subject) and "man" (object) — less on "the".
@@ -197,3 +274,42 @@ This is the visualization that made attention "the new chunked LSTM hidden state
 - [ ] What's the masked attention used in decoders for?
 - [ ] Implement scaled dot-product attention from scratch in PyTorch.
 - [ ] Why is attention O(T²) — and what are some workarounds for long contexts?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Attention** | Weighted-sum mechanism: each token pulls info from others based on relevance |
+| **Self-attention** | Q, K, V all come from the same input |
+| **Cross-attention** | Q from one sequence, K and V from another (e.g., decoder ↔ encoder) |
+| **Masked attention** | Causal mask hiding future positions, used for autoregressive generation |
+| **Query (Q)** | "What am I looking for?" vector for a token |
+| **Key (K)** | "What do I have to offer?" vector for a token |
+| **Value (V)** | "What's my actual content?" vector for a token |
+| **Scaled dot-product attention** | `softmax(QKᵀ / √d_k) · V` |
+| **`d_k`** | Dimension per head — used in the √d_k scaling |
+| **Attention scores** | Raw `QKᵀ` matrix before softmax |
+| **Attention weights** | Softmaxed scores; rows sum to 1 |
+| **Multi-head attention** | Several attention computations in parallel, then concatenated |
+| **`n_heads`** | Number of parallel attention heads |
+| **Head dimension** | `d_model / n_heads`, the width per head |
+| **`W_Q`, `W_K`, `W_V`, `W_O`** | Learnable projection matrices for queries, keys, values, and output |
+| **Causal mask** | Lower-triangular mask used in decoder self-attention |
+| **Padding mask** | Mask hiding padding tokens from attention |
+| **`-inf` masking** | Set masked positions to −∞ before softmax so they get probability 0 |
+| **`nn.MultiheadAttention`** | PyTorch's built-in multi-head attention module |
+| **Flash Attention** | GPU-efficient implementation of exact attention |
+| **Sparse attention** | Each token attends to a subset (Longformer, BigBird) |
+| **Linear attention** | Approximations that drop O(T²) to O(T) (Performer, Linformer) |
+| **State-space model** | Alternative to attention (Mamba) |
+| **Attention map / heatmap** | (T × T) visualization of which tokens attend to which |
+| **Coreference** | When different words refer to the same entity ("she" → "Alice") |
+| **Quadratic complexity** | Cost grows with the square of sequence length |
+| **Context length** | Maximum tokens the model can attend to at once |
+
+## Further reading
+- Where attention sits in the bigger picture: [03-transformer-architecture.md](03-transformer-architecture.md)
+- Pre-trained Transformer use: [05-bert-huggingface.md](05-bert-huggingface.md)
+- Original paper "Attention Is All You Need": https://arxiv.org/abs/1706.03762

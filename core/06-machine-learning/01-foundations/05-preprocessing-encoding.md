@@ -6,6 +6,71 @@
 
 ---
 
+## In one sentence
+**Preprocessing** turns messy raw data (strings, missing values, mismatched scales) into a clean numeric matrix the algorithm can actually use — and how you do it directly decides whether your "great" model is honest or self-deceived.
+
+## Real-world analogy
+A blender can't make a smoothie out of unwashed, un-peeled fruit still in its plastic wrapper. You wash, peel, chop — *then* blend. ML algorithms are blenders. Preprocessing is the prep work. Skip it and you get junk; do it sloppily (e.g., wash the fruit *with the test set's water*) and you contaminate the result.
+
+## The intuition (plain English)
+Real-world columns come in shapes algorithms hate:
+- Strings ("red", "blue") — most models need numbers.
+- Wildly different magnitudes (income in 100,000s, age in 10s) — distance-based models think income is "more important" because the numbers are bigger.
+- Missing values — `NaN` crashes most algorithms.
+- Categorical with implicit order ("low" < "medium" < "high") vs. no order ("Bollywood" vs. "Hollywood").
+
+Preprocessing is a small toolbox: **encode** (string → number), **scale** (different ranges → comparable), **impute** (fill missing), and **split-then-fit** (so test set never leaks into training).
+
+## Mini worked example — three rows of customer data
+
+```
+   age     income     city        signed_up_on
+0   25     45,000     "NY"        2024-03-15
+1   34     1,200,000  "SF"        NaN
+2   45     72,000     NaN         2024-07-20
+```
+
+After preprocessing (drop_first one-hot, StandardScaler on numerics, median imputation, date decomposition):
+
+```
+   age_z   income_z   city_NY  city_SF  signup_year  signup_month
+0  -1.07   -0.69      1        0        2024         3
+1  -0.13    1.36      0        1        2024         5     ← month imputed (median)
+2   1.20   -0.65      0        0        2024         7     ← city_NY=0 + city_SF=0 → "other" (LA)
+```
+
+Now every cell is a number; no NaNs; features have similar magnitudes. *This* is what gets fed to the model.
+
+## At-a-glance — the preprocessing pipeline
+
+```mermaid
+flowchart TB
+    Raw[Raw dataframe] --> Split[train/test split FIRST]
+    Split --> Fit[fit preprocessing on TRAIN only]
+    Fit --> Cat{For each categorical}
+    Cat -- ordinal --> Ord[OrdinalEncoder<br/>with explicit order]
+    Cat -- "nominal, low cardinality" --> OHE[OneHotEncoder<br/>drop_first]
+    Cat -- "nominal, high cardinality" --> Tgt[TargetEncoder<br/>inside CV]
+    Fit --> Num{For each numeric}
+    Num -- "outliers" --> Rob[RobustScaler]
+    Num -- "neural net inputs" --> MM[MinMaxScaler]
+    Num -- default --> Std[StandardScaler]
+    Fit --> Miss[Imputer<br/>median / mode / model-based]
+    OHE --> Pipe[ColumnTransformer + Pipeline]
+    Std --> Pipe
+    Miss --> Pipe
+    Pipe --> Model[Fit model]
+    Pipe --> Test[transform test set the SAME way]
+```
+
+## Why this matters
+- **Leakage from preprocessing kills models silently.** Fitting a scaler on combined train+test → impressive validation, terrible production.
+- **Wrong encoder breaks the model.** LabelEncoder on "Bollywood/Hollywood" tells linear models that Hollywood is "more" than Bollywood — a meaningless inequality the model takes seriously.
+- **Scaling unlocks distance-based methods.** k-NN, SVM, k-means, and neural networks all degrade badly without it.
+- **Pipelines guarantee correctness.** Wrap preprocessing + model in one `Pipeline`; sklearn handles "fit on train, transform on test" automatically.
+
+---
+
 ## 1. Why preprocessing exists
 
 ML algorithms expect **numbers in ranges they can compare**. Real data has:
@@ -282,3 +347,45 @@ df["hour_cos"] = np.cos(2 * np.pi * df["hour"] / 24)
 - [ ] Why use a Pipeline + ColumnTransformer instead of doing each step manually?
 - [ ] Three strategies for handling missing values; when each is appropriate?
 - [ ] How do you handle cyclical features like hour-of-day?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Preprocessing** | Turning raw data into clean numeric features the model can consume |
+| **Encoding** | Converting non-numeric data (strings) to numbers |
+| **One-hot encoding** | Each category becomes its own 0/1 column ("color = red" → red=1, blue=0, green=0) |
+| **Dummy variable trap** | Keeping all one-hot columns produces perfect linear dependence — drop one |
+| **Label encoding** | Map each category to an integer (0, 1, 2, …) — only safe for ordinal data |
+| **Ordinal encoding** | Like label encoding but with you specifying the order — safer than `LabelEncoder` |
+| **Target encoding** | Replace each category with the mean target value for that category — careful, leakage risk |
+| **Frequency / count encoding** | Replace each category with how often it appears |
+| **Hashing encoder** | Hash categories into a fixed number of columns — for very high cardinality |
+| **High-cardinality** | A categorical column with many unique values (zip codes, user IDs) |
+| **Ordinal vs nominal** | Ordinal has order ("low/med/high"); nominal doesn't ("red/blue/green") |
+| **Scaling** | Adjusting numeric features to comparable magnitudes |
+| **StandardScaler** | Subtract mean, divide by std dev — produces z-scores (mean 0, std 1) |
+| **MinMaxScaler** | Squash each feature into [0, 1] — useful for neural net / image inputs |
+| **RobustScaler** | Like StandardScaler but uses median and IQR — resistant to outliers |
+| **MaxAbsScaler** | Divide by max absolute value — preserves sparsity; for sparse text features |
+| **z-score** | `(x − mean) / std` — how many std devs from the mean |
+| **Imputation** | Filling in missing values |
+| **SimpleImputer** | sklearn class for mean/median/mode imputation |
+| **Missing-indicator flag** | Extra binary column saying "this row was originally missing" — useful when missingness itself signals something |
+| **Data leakage** | Letting test-set info influence training (often via preprocessing) — produces fake-good scores |
+| **Pipeline** | sklearn class chaining preprocessing + model so `.fit` and `.transform` happen in order, only on train |
+| **ColumnTransformer** | Apply different preprocessors to different columns inside a pipeline |
+| **`fit_transform`** | Learn parameters AND apply them — call only on training data |
+| **`transform`** | Apply already-learned parameters — call on test/new data |
+| **Cyclical features** | Features that wrap around (hour, month, day-of-week) — encode with sin/cos so 23 is "near" 0 |
+| **Sparsity** | Most entries are zero (e.g., one-hot encoded text) — efficient to store as sparse matrices |
+| **handle_unknown="ignore"** | OneHotEncoder option that maps unseen categories to all-zero (avoids prediction-time crashes) |
+
+## Further reading
+- Previous: [04-model-evaluation-regression.md](04-model-evaluation-regression.md)
+- Next: [06-overfit-underfit-bias-variance.md](06-overfit-underfit-bias-variance.md)
+- Scaling for SVM: [../02-classification/03-svm.md](../02-classification/03-svm.md)
+- Class imbalance preprocessing: [../02-classification/06-class-imbalance.md](../02-classification/06-class-imbalance.md)
+- Math foundation — z-score & standard normal: [../../05-math-statistics/01-foundations/04-distributions.md](../../05-math-statistics/01-foundations/04-distributions.md)

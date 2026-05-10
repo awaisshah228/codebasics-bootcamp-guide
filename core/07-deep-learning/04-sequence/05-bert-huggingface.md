@@ -6,6 +6,71 @@
 
 ---
 
+## In one sentence
+**BERT** is a pre-trained Transformer encoder that turns each word into a *context-aware* vector, and **HuggingFace** is the library that lets you load BERT (or a thousand other models) in three lines and fine-tune it for your task.
+
+## Real-world analogy
+Word2Vec gave each word a fixed business-card identity ("bank" = same vector everywhere). BERT gives each word a context-aware identity — like a chameleon. In "river bank" it's near "shore"; in "deposit at the bank" it's near "money". HuggingFace is the universal hiring agency where you grab pre-trained chameleons by name and put them to work in your project.
+
+## The intuition (plain English)
+- BERT was pre-trained on huge text by **masking** ~15% of tokens and training the model to predict them — forcing it to use bidirectional context.
+- After pre-training, BERT's middle layers are full of **general language understanding**.
+- For your task (sentiment, NER, QA), you swap in a tiny task head and **fine-tune** at a small learning rate (~2e-5) for a few epochs.
+- The HuggingFace `Trainer` and `pipeline` APIs hide most boilerplate so you can focus on the data and the metric.
+
+## Mini worked example — IMDB sentiment in 8 lines
+
+```python
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+from datasets import load_dataset
+
+ds = load_dataset("imdb")
+tok = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+model = AutoModelForSequenceClassification.from_pretrained(
+    "distilbert-base-uncased", num_labels=2
+)
+# (Trainer config + trainer.train() — see full recipe below)
+
+# After fine-tuning, inference is one line:
+clf = pipeline("sentiment-analysis", model=model, tokenizer=tok)
+print(clf("This bootcamp made deep learning click for me"))
+# [{'label': 'LABEL_1', 'score': 0.997}]    ← positive
+```
+
+A 90%-accurate sentiment classifier on free Colab in roughly 10 minutes.
+
+## At-a-glance — when to reach for which approach
+
+```mermaid
+flowchart TB
+    Q[NLP task] --> A{How much labeled data?}
+    A -- "Zero or 5 examples" --> P[Prompt an LLM<br/>GPT-4 / Claude]
+    A -- "Hundreds" --> S[Sentence embeddings + linear<br/>sentence-transformers]
+    A -- "1k - 100k" --> F[Fine-tune BERT / DistilBERT]
+    A -- "Millions + serious budget" --> X[Fine-tune larger LLM or use bigger Transformer]
+    Q --> T{Task type}
+    T -- "Classify text" --> SC[AutoModelForSequenceClassification]
+    T -- "Tag each token NER/POS" --> TC[AutoModelForTokenClassification]
+    T -- "Extractive QA" --> QA[AutoModelForQuestionAnswering]
+    T -- "Generation chat / summarize" --> G[Use a decoder-only or seq2seq model]
+```
+
+```
+   BERT input  →  [CLS] my dog is cute [SEP]  →  768-dim vectors per token
+                          │
+                          ▼
+                  use [CLS] vector for classification head
+                  use per-token vectors for NER / token tasks
+                  pool tokens for sentence embeddings
+```
+
+## Why this matters
+- Almost every NLP project in production uses HuggingFace + a BERT-family model or an LLM.
+- Knowing **fine-tune vs prompt vs sentence-embed** decides whether your project takes 1 hour or 1 month.
+- The `pipeline` API hides the boilerplate — but understanding tokens, attention masks, and `[CLS]` lets you debug when it inevitably misbehaves.
+
+---
+
 ## 1. Word embeddings — vectors that mean something
 
 Before Transformers: words were one-hot (sparse, no semantic relationship). **Word embeddings** turn each word into a dense vector where semantically similar words are close.
@@ -236,3 +301,56 @@ For 2025 production: **try LLM prompt first**; fine-tune BERT only when latency/
 - [ ] Difference between `AutoModel` and `AutoModelForSequenceClassification`?
 - [ ] When fine-tune vs prompt an LLM?
 - [ ] What's `sentence-transformers` and when to reach for it?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Word embedding** | A learned vector representing a word |
+| **Word2Vec** | Early static-embedding method (skip-gram or CBOW) |
+| **GloVe** | Static embeddings from co-occurrence statistics |
+| **FastText** | Subword-aware static embeddings |
+| **Static embedding** | Same vector for a word regardless of context |
+| **Contextual embedding** | Different vector depending on the surrounding sentence (BERT-style) |
+| **Tokenizer** | Splits text into tokens and maps them to integer IDs |
+| **WordPiece / BPE / SentencePiece** | Subword tokenization algorithms |
+| **`[CLS]`** | Special "classification" token at position 0 — its vector summarizes the sentence |
+| **`[SEP]`** | Separator between two sentences in a pair |
+| **`[MASK]`** | Token used during BERT pre-training to hide words |
+| **`input_ids`** | Tensor of token IDs |
+| **`attention_mask`** | 1/0 mask telling the model which tokens are real vs padding |
+| **`token_type_ids`** | Segment IDs distinguishing sentence A from sentence B |
+| **BERT** | Bidirectional Encoder Representations from Transformers |
+| **MLM (Masked Language Modeling)** | Pre-training task: predict masked tokens |
+| **NSP (Next Sentence Prediction)** | Pre-training task: does sentence B follow sentence A? |
+| **RoBERTa** | More-data, no-NSP, better-trained BERT variant |
+| **DistilBERT** | Smaller, faster BERT distilled from the original (~95% of quality) |
+| **ALBERT** | BERT with parameter sharing across layers |
+| **DeBERTa** | BERT with disentangled attention |
+| **XLM-R** | Multilingual BERT-style model |
+| **HuggingFace `transformers`** | Open-source library for pre-trained Transformer models |
+| **`AutoTokenizer` / `AutoModel`** | Auto-loaders that fetch the right class for a given checkpoint |
+| **`AutoModelForSequenceClassification`** | BERT + a classification head |
+| **`AutoModelForTokenClassification`** | BERT + a per-token (NER, POS) head |
+| **`AutoModelForQuestionAnswering`** | BERT + start/end span heads for extractive QA |
+| **`Trainer`** | HuggingFace's high-level training loop |
+| **`TrainingArguments`** | Config object for `Trainer` (epochs, LR, batch sizes, eval strategy) |
+| **`pipeline`** | One-line inference API for common tasks |
+| **`datasets`** | HuggingFace's library for loading and preprocessing datasets |
+| **Fine-tuning** | Continue training a pre-trained model on your task with a small LR |
+| **Sentence embedding** | Single vector for a whole sentence (often via `sentence-transformers`) |
+| **`sentence-transformers`** | Library for sentence-level embeddings; great for semantic search |
+| **Cosine similarity** | Standard metric for comparing two embeddings |
+| **NER (Named Entity Recognition)** | Tag person/organization/location in text |
+| **POS tagging** | Label each word's part of speech |
+| **Extractive QA** | Pull the answer span out of a passage |
+| **`pooler_output`** | A pooled `[CLS]` representation (note: not all models provide it) |
+| **`last_hidden_state`** | Per-token hidden states from the final encoder layer |
+
+## Further reading
+- Architecture reference: [03-transformer-architecture.md](03-transformer-architecture.md)
+- The attention math under the hood: [04-attention.md](04-attention.md)
+- Course module on NLP foundations: see the bootcamp NLP module
+- HuggingFace docs: https://huggingface.co/docs/transformers

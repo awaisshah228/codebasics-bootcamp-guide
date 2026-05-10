@@ -10,6 +10,61 @@ A beverage company wants to **price new SKUs** before launch. They have a survey
 
 ---
 
+## In one sentence
+You build a model that, given a beverage's attributes (flavor, size, sugar level, brand strength), predicts which **price bucket** (low / mid / high / premium) it should launch at — turning consumer-survey data into a pricing recommendation.
+
+## Real-world analogy
+A music producer sets the ticket price for a new artist. Too low and the venue's revenue suffers; too high and the venue stays empty. They guess based on past artists' attributes — genre, audience size, hype. You're doing the same for soft drinks: model decides "this new mango energy drink with strong brand strength → premium tier." The reward is fewer pricing mistakes than the marketing team's gut feel.
+
+## The intuition (plain English)
+1. **Multi-class classification** with 4 buckets — different from binary fraud/default. Each bucket has roughly similar weight, so you'll watch **macro-F1** (each class counted equally).
+2. **Survey data is small** — a few thousand rows max. Don't reach for deep neural networks; classical models (RF, XGBoost) are perfect.
+3. **Heavy categorical features** (flavor, region, packaging) — encode carefully; consider CatBoost.
+4. **Off-diagonal patterns matter**. Confusing "mid" with "high" is forgivable; confusing "low" with "premium" is a costly mistake. Read the confusion matrix, not just metrics.
+5. **Insights are the deliverable** — surface "top 5 attributes that move price" to the marketing team.
+
+## Mini worked example — predicting price bucket for a new SKU
+
+```
+new SKU:  flavor=mango, size_ml=500, sugar=15g, brand_strength=7/10, region=south
+model:    XGBoost classifier (4-class)
+output:   class probabilities = [low: 0.05, mid: 0.62, high: 0.28, premium: 0.05]
+recommendation:  launch at mid-tier; consider stretching to high in a premium pack
+```
+
+Confusion matrix on test data:
+```
+                  predicted
+actual         low  mid  high  premium
+low             45   12    1     0          ← rarely confused with premium ✓
+mid             10   58   18     2
+high             2   20   55    11
+premium          0    3   12    44          ← rarely confused with low ✓
+```
+
+The model rarely mixes up extreme tiers — that's the *off-diagonal* pattern that matters for the business.
+
+## At-a-glance — full project flow
+
+```mermaid
+flowchart TB
+    EDA[1. EDA<br/>distribution, demographics] --> Clean[2. Cleaning + categorical encoding]
+    Clean --> FE[3. Feature engineering<br/>cost-to-size, brand index]
+    FE --> Cmp[4. Compare 3 model families<br/>logreg / RF / XGBoost]
+    Cmp --> Tune[5. Tune the winner with Optuna]
+    Tune --> Mc[6. Multiclass evaluation<br/>macro-F1 + confusion matrix]
+    Mc --> Insight[7. SHAP insights<br/>top 5 drivers per tier]
+    Insight --> Stream[8. Streamlit demo<br/>one-pager for marketing]
+```
+
+## Why this matters
+- **Multi-class extension** of the binary projects — same recipe, different metric and confusion-matrix reading.
+- **Low-data scenario** — exercises the discipline of *not* reaching for fancy models when classical ones suffice.
+- **Insights-driven**: hiring managers care that you can translate "feature_importance_" into a marketing one-pager.
+- **Portfolio variety**: pairs nicely with healthcare-premium (regression) and credit-risk (binary classification) for a well-rounded ML portfolio.
+
+---
+
 ## Why this project is unusual
 
 It's **survey-driven**, so:
@@ -150,3 +205,42 @@ beverage-price/
 - [ ] Is my Streamlit demo intuitive enough for a non-DS to use?
 - [ ] Did I quantify business impact ("would have priced 80% of SKUs in the right bucket vs the team's 60%")?
 - [ ] Did I post a build-in-public update?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **SKU (Stock Keeping Unit)** | A specific product variant — flavor + size + packaging combination |
+| **Price bucket / tier** | Discrete pricing band: low / mid / high / premium |
+| **Multi-class classification** | Predicting one of three or more mutually exclusive classes |
+| **Ordinal target** | Classes have a natural order (low < mid < high < premium) |
+| **Ordinal regression** | Models that respect class order — `mord` package for Python |
+| **Macro-F1** | Average F1 across classes, each class counted equally — fair when classes have different sizes |
+| **Weighted F1** | F1 weighted by class frequency — large classes dominate |
+| **Confusion matrix (multiclass)** | Square matrix; row = actual class, col = predicted class |
+| **Off-diagonal pattern** | Where the model confuses adjacent vs. distant classes — adjacent confusion costs less |
+| **Survey data** | Small dataset from consumer questionnaires |
+| **Brand strength** | Numeric measure of brand recognition (typically from a separate survey) |
+| **Cost-to-size ratio** | Ingredient cost / pack size — engineered feature |
+| **Competitor gap** | Price difference from nearest competitor — engineered feature |
+| **Categorical encoding** | One-hot for low cardinality, target encoding for high cardinality |
+| **`min_frequency`** | OneHotEncoder option that lumps rare categories together |
+| **CatBoost** | Gradient-boosting library that handles categorical features natively |
+| **`multi_class="multinomial"`** | sklearn LogisticRegression's softmax setting for multi-class |
+| **`class_weight="balanced"`** | Balances loss across uneven class sizes |
+| **SHAP** | Per-prediction feature attribution — drives the marketing one-pager |
+| **`predict_proba`** | Returns probability for each class — used for confidence reporting |
+| **Macro vs micro vs weighted average** | Different ways to summarize per-class metrics into one number |
+| **Streamlit demo** | Interactive web app showing predicted bucket + probabilities |
+| **Insights for marketing** | Business-flavored writeup of which features drive pricing |
+| **Build-in-public** | Sharing project progress online while building — boosts portfolio reach |
+
+## Further reading
+- Multi-class logistic regression: [../02-classification/01-logistic-regression.md](../02-classification/01-logistic-regression.md)
+- Classification metrics + macro-F1: [../02-classification/02-classification-metrics.md](../02-classification/02-classification-metrics.md)
+- Random Forest: [../03-ensemble/01-bagging-random-forest.md](../03-ensemble/01-bagging-random-forest.md)
+- XGBoost / CatBoost: [../03-ensemble/02-boosting-adaboost-gbm-xgb.md](../03-ensemble/02-boosting-adaboost-gbm-xgb.md)
+- Companion regression project: [01-healthcare-premium-regression.md](01-healthcare-premium-regression.md)
+- Companion classification project: [02-credit-risk-classification.md](02-credit-risk-classification.md)

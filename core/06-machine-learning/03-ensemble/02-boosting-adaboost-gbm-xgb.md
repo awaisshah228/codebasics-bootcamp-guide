@@ -7,6 +7,83 @@
 
 ---
 
+## In one sentence
+**Boosting** trains a sequence of small models where each new one specifically targets the mistakes of the previous — and **XGBoost / LightGBM** are the engineered, hyper-tuned versions that win most tabular ML competitions.
+
+## Real-world analogy
+Imagine you're studying for an exam with practice tests. After your first test you note which questions you got wrong, then *focus your next study session on those topics*. After the next test, again you note remaining weak spots and double-down. By the fifth round, you've slowly chipped away every weakness. That iterative, error-focused study is **boosting**. Each "study session" is a small decision tree, and what's left to learn — your **residuals** — is what each new tree specifically targets.
+
+## The intuition (plain English)
+1. Train a small (shallow) tree. It gets some predictions right, some wrong.
+2. Compute the **residuals** — what's still left to predict.
+3. Train a second small tree to predict the residuals.
+4. Add (a fraction of) tree #2's predictions to tree #1's. Compute new residuals.
+5. Repeat for hundreds or thousands of trees.
+6. Final prediction = sum of all the trees' contributions, scaled by the **learning rate**.
+
+Bagging (Random Forest) reduces *variance* by averaging diverse trees. Boosting reduces *bias* by sequentially adding trees that fix what the ensemble still gets wrong. Boosting usually wins on accuracy; Random Forest is faster and easier.
+
+## Mini worked example — predicting house prices
+
+Three houses; ground-truth prices: 200, 300, 500.
+
+```
+step 0: ensemble prediction = mean(y) = 333 for all houses
+        residuals = (200−333, 300−333, 500−333) = (−133, −33, 167)
+
+step 1: train tree #1 on residuals → predicts (−100, −20, 130)
+        update prediction = 333 + 0.5 × (−100, −20, 130) = (283, 323, 398)
+                            (0.5 is the learning rate η)
+        new residuals = (200−283, 300−323, 500−398) = (−83, −23, 102)
+
+step 2: train tree #2 on the new residuals → predicts (−60, −15, 80)
+        update prediction = 283+0.5·(−60), 323+0.5·(−15), 398+0.5·80
+                          = (253, 315, 438)
+        new residuals = (−53, −15, 62)
+
+... repeat for 100s of rounds, each tree shrinking what's left to predict.
+```
+
+Each tree only fixes a slice of the error — the **learning rate** (0.5 above; usually 0.01–0.1 in practice) controls how much each tree contributes. Smaller learning rate + more trees = smoother, more accurate model.
+
+## At-a-glance — bagging vs boosting
+
+```mermaid
+flowchart LR
+    subgraph Bagging
+        B1[bootstrap 1] --> T1[tree 1]
+        B2[bootstrap 2] --> T2[tree 2]
+        B3[bootstrap 3] --> T3[tree 3]
+        T1 --> Avg[Average / Vote]
+        T2 --> Avg
+        T3 --> Avg
+    end
+    subgraph Boosting
+        D[Data] --> S1[tree 1<br/>fits y]
+        S1 --> R1[residuals]
+        R1 --> S2[tree 2<br/>fits residuals]
+        S2 --> R2[residuals 2]
+        R2 --> S3[tree 3<br/>fits residuals 2]
+        S3 --> Sum[Sum × learning rate]
+    end
+```
+
+```
+boosting prediction = η·tree₁(x) + η·tree₂(x) + … + η·tree_T(x)
+
+learning rate η small → each tree contributes a little; need many trees
+learning rate η large → each tree contributes a lot; faster but unstable
+```
+
+## Why this matters
+- **Wins on tabular data more often than any other algorithm.** XGBoost / LightGBM dominate Kaggle leaderboards.
+- **Built-in regularization** (L1/L2 on leaf weights, tree depth, subsampling) makes them resistant to overfitting *if* tuned.
+- **Early stopping** is built in — train 2,000 trees but auto-stop when validation stops improving.
+- **Native handling of missing values, GPU support, sparsity** make XGBoost industrial-strength.
+- **Credit-risk and healthcare-premium projects** both use XGBoost as their final tuned model.
+
+---
+
 ## 1. The boosting idea
 
 Train models **sequentially**, each one focusing on the **mistakes of the previous**. The final prediction is a weighted sum (or vote) of all models.
@@ -290,3 +367,44 @@ This is essentially the credit-risk project skeleton (Module 6 project 2).
 - [ ] When use LightGBM vs CatBoost?
 - [ ] Compute `scale_pos_weight` for a 95/5 imbalanced binary problem.
 - [ ] What's SHAP and why use it on top of feature importance?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **Boosting** | Train models sequentially; each new one targets the previous models' mistakes |
+| **Weak learner** | A model only slightly better than random — boosting combines many of them |
+| **Decision stump** | Depth-1 tree (one yes/no question) — classic AdaBoost building block |
+| **AdaBoost (Adaptive Boosting)** | Original boosting: reweight misclassified samples each round |
+| **Gradient Boosting (GBM)** | Generalization: each new tree fits the *gradient of the loss* (residuals for MSE) |
+| **Residual** | `y − ŷ` — what the current ensemble still gets wrong |
+| **XGBoost (eXtreme Gradient Boosting)** | Engineered GBM with regularization, fast histogram splits, early stopping |
+| **LightGBM** | Microsoft's faster GBM alternative; uses leaf-wise tree growth |
+| **CatBoost** | Yandex's GBM that handles categorical features natively |
+| **Learning rate (η, `learning_rate`)** | Shrinkage applied to each tree's contribution. Small + many trees = best |
+| **`n_estimators` / `num_boost_round`** | Number of trees |
+| **`max_depth`** | Tree depth — keep small (3–7) for boosting |
+| **`subsample`** | Fraction of rows sampled per tree (stochastic boosting) |
+| **`colsample_bytree`** | Fraction of features sampled per tree |
+| **`reg_alpha`, `reg_lambda`** | XGBoost L1 / L2 regularization on leaf weights |
+| **`gamma` (XGBoost)** | Minimum loss reduction required to make a split — bigger = more conservative |
+| **`scale_pos_weight`** | XGBoost class-imbalance knob — usually `n_neg / n_pos` |
+| **Early stopping** | Stop training when validation score plateaus — prevents overfit |
+| **`early_stopping_rounds`** | How many rounds of no improvement before stopping |
+| **Histogram-based splitting** | Fast split-finding by binning feature values — used by LightGBM and modern XGBoost |
+| **Leaf-wise vs level-wise tree growth** | LightGBM grows the highest-loss leaf first; XGBoost grows level by level |
+| **SHAP (SHapley Additive exPlanations)** | Modern method to explain each prediction by attributing it to each feature |
+| **TreeExplainer** | SHAP variant optimized for tree ensembles — fast and exact |
+| **Feature importance (gain / weight / cover)** | XGBoost's per-feature importance metrics |
+| **`eval_metric`** | Metric XGBoost tracks during training (`auc`, `logloss`, `rmse`) |
+| **`eval_set`** | Validation data XGBoost watches for early stopping |
+| **GPU training** | XGBoost / LightGBM can train on GPU for big datasets |
+
+## Further reading
+- Previous: [01-bagging-random-forest.md](01-bagging-random-forest.md)
+- Next: [03-cross-validation-tuning.md](03-cross-validation-tuning.md)
+- Credit-risk project (XGBoost end-to-end): [../06-projects/02-credit-risk-classification.md](../06-projects/02-credit-risk-classification.md)
+- Healthcare-premium project: [../06-projects/01-healthcare-premium-regression.md](../06-projects/01-healthcare-premium-regression.md)
+- Gradient descent foundation: [../01-foundations/03-gradient-descent-cost.md](../01-foundations/03-gradient-descent-cost.md)

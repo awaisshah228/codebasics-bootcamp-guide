@@ -6,6 +6,86 @@
 
 ---
 
+## In one sentence
+A **Convolutional Neural Network (CNN)** is a network that slides small **filters** across an image, layer after layer, building up from simple edges to whole objects — the standard tool for any image task.
+
+## Real-world analogy
+Imagine you're checking a wall for cracks with a magnifying glass. You sweep the glass across, noting where you see crack-like patterns. Then you zoom out and look for *clusters* of cracks (corners, joints). Finally you decide: is this wall damaged? A CNN does exactly that — many tiny "magnifying glasses" (filters) sweep across; deeper layers combine the findings into bigger structures.
+
+## The intuition (plain English)
+- A **filter** is a tiny grid of numbers (often 3×3) that looks for a specific pattern (vertical edge, color blob, texture).
+- The filter **slides** over the whole image and produces a "where this pattern exists" map (the **feature map**).
+- Each layer learns *many* filters in parallel; deeper layers combine earlier feature maps into more complex concepts.
+- Filters are **reused** at every spatial position → far fewer parameters than an MLP, and patterns are detected anywhere in the image.
+
+## Mini worked example — a 3×3 vertical-edge filter on a tiny 5×5 image
+
+Input image (just light/dark pixels):
+
+```
+1 2 3 4 5
+6 7 8 9 0     ← imagine "0" at the right edge means very dark
+1 2 3 4 5
+6 7 8 9 0
+1 2 3 4 5
+```
+
+Vertical-edge filter (positive on left, negative on right):
+
+```
+ 1  0 -1
+ 1  0 -1
+ 1  0 -1
+```
+
+To compute the top-left of the output, overlay the filter on the top-left 3×3 patch and do an element-wise multiply + sum:
+
+```
+patch:           filter:           product:
+1 2 3            1 0 -1            (1)(1) + (2)(0) + (3)(-1)
+6 7 8     ⊙      1 0 -1     =      (6)(1) + (7)(0) + (8)(-1)
+1 2 3            1 0 -1            (1)(1) + (2)(0) + (3)(-1)
+
+sum = (1 - 3) + (6 - 8) + (1 - 3) = -2 + -2 + -2 = -6
+```
+
+Slide the filter one step right, repeat — you get a feature map (3×3 here, since `5 - 3 + 1 = 3`). Negative values mean a left-to-right *bright→dark* edge. That single filter has now annotated the whole image with "where do vertical edges live?"
+
+## At-a-glance — typical CNN flow for CIFAR-10
+
+```mermaid
+flowchart LR
+    A[3 x 32 x 32 RGB] --> B[Conv 3 to 32 + BN + ReLU]
+    B --> C[Conv + BN + ReLU]
+    C --> D[MaxPool: 32 to 16]
+    D --> E[Conv 32 to 64 ... + Pool: 16 to 8]
+    E --> F[Conv 64 to 128 ... + Pool: 8 to 4]
+    F --> G[GlobalAvgPool to 1x1]
+    G --> H[Flatten]
+    H --> I[Linear to 10 classes]
+```
+
+```
+            spatial dim shrinks  ─────────────►
+            channels grow        ─────────────►
+
+  3×32×32 ─► [Conv+BN+ReLU]² ─► Pool ─► [Conv+BN+ReLU]² ─► Pool ─► [Conv+BN+ReLU]² ─► Pool
+            32 channels        32×16×16  64 channels       64×8×8   128 channels       128×4×4
+                                                                                          │
+                                                                              GlobalAvgPool
+                                                                                          │
+                                                                                Flatten → FC
+                                                                                          │
+                                                                                       10 logits
+```
+
+## Why this matters
+- CNNs are how every image task you'll see — classification, detection, segmentation — gets solved.
+- Understanding the conv operation (filter + slide + sum) is the prerequisite for understanding CNNs, ViT patches, and even spectrogram audio models.
+- The skip-connection (ResNet) idea introduced here is reused in **every** modern deep architecture, including Transformers.
+
+---
+
 ## 1. Why CNNs (vs MLPs) for images
 
 A 256×256 RGB image has 196,608 input numbers. An MLP layer with 1024 neurons → ~200M parameters in the first layer alone. Useless.
@@ -223,3 +303,43 @@ Every modern deep architecture (Transformers, EfficientNet, etc.) uses skip conn
 - [ ] What's `AdaptiveAvgPool2d((1, 1))` and when use it?
 - [ ] Build a 3-block CNN for CIFAR-10 in PyTorch from memory.
 - [ ] Why does augmentation help so much on small datasets?
+
+---
+
+## Glossary
+
+| Term | Plain meaning |
+|------|---------------|
+| **CNN** | Convolutional Neural Network — uses sliding filters on images |
+| **Convolution** | Sliding a small filter across an input and computing weighted sums |
+| **Filter / kernel** | A small grid (often 3×3) of learned numbers that detects a pattern |
+| **Feature map** | The output of one filter applied across the whole input |
+| **Channel** | A 2D plane of pixel values (RGB has 3); CNNs stack many channels per layer |
+| **Stride** | How many pixels the filter jumps each step |
+| **Padding** | Pixels (often zeros) added around the edge to control output size |
+| **`Conv2d(in, out, k, padding=p)`** | PyTorch's 2D convolution layer |
+| **Receptive field** | The patch of the original image one neuron deep in the net "sees" |
+| **Pooling** | Downsampling step (max-pool or avg-pool) that reduces spatial size |
+| **`MaxPool2d`** | Takes the maximum of each non-overlapping window |
+| **`AvgPool2d`** | Takes the average of each window |
+| **`AdaptiveAvgPool2d((1,1))`** | Pools any spatial size into 1×1 — common before the FC head |
+| **Global Average Pooling (GAP)** | Average across all spatial positions per channel |
+| **Locality** | Nearby pixels are correlated — the structural assumption CNNs exploit |
+| **Translation equivariance** | Shifting the input shifts the output — built into convolution |
+| **Weight sharing** | The same filter weights are reused at every position |
+| **CIFAR-10** | 60k tiny 32×32 RGB images, 10 classes — standard CNN benchmark |
+| **Skip / residual connection** | Output = layer(x) + x; lets gradients flow through deep nets |
+| **ResNet** | Family of deep networks built on residual blocks |
+| **EfficientNet** | Modern CNN family that scales depth, width, and resolution together |
+| **MobileNet** | Lightweight CNN family using depthwise-separable convolutions |
+| **ViT (Vision Transformer)** | Applies Transformer attention to image patches instead of using convolutions |
+| **ConvNeXt** | Modern CNN designed with Transformer-era training tricks |
+| **Backbone** | The feature-extracting part of a network (everything before the classifier) |
+| **Head** | The final task-specific layers (e.g., the classifier) |
+| **Output shape formula** | `out = (N − k + 2p) / s + 1` |
+| **`nn.Flatten`** | Reshapes a tensor to (batch, −1) for the dense head |
+
+## Further reading
+- Next: [02-data-augmentation.md](02-data-augmentation.md) — how to multiply your training data
+- Then: [03-transfer-learning-pretrained.md](03-transfer-learning-pretrained.md) — skip training from scratch
+- Forward-pass math reference: [../architectures-and-math.md](../architectures-and-math.md)
