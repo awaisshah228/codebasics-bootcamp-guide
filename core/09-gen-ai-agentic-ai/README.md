@@ -37,11 +37,13 @@ Read that arrow flow once more. Every chapter in this module clips into one of t
 
 | Question | Where it lives |
 |---|---|
-| How do I talk to an LLM well? | [01-llm-fundamentals.md](./01-llm-fundamentals.md), [02-prompt-engineering.md](./02-prompt-engineering.md) |
-| How do I make it answer from MY documents? | [03-rag-vector-databases.md](./03-rag-vector-databases.md) |
-| How do I let it take actions (call APIs, read files)? | [04-agents-tool-use.md](./04-agents-tool-use.md) |
-| How do I tweak the model itself? | [05-fine-tuning-llms.md](./05-fine-tuning-llms.md) |
-| How do I build, test, and ship the app? | [06-langchain-claude-api.md](./06-langchain-claude-api.md), [07-evaluation-llm-apps.md](./07-evaluation-llm-apps.md), [08-deployment-cost.md](./08-deployment-cost.md) |
+| How do I talk to an LLM well? | [01-foundations/](./01-foundations/) — LLM fundamentals, context & temperature, prompt engineering |
+| How do I make it answer from MY documents? | [02-rag/](./02-rag/) — vector databases, RAG pipeline, ChromaDB, fine-tuning vs RAG |
+| How do I let it take actions (call APIs, read files)? | [04-agents/](./04-agents/) — agent fundamentals, multi-agent systems, evaluation |
+| How do I tweak the model itself? | [02-rag/04-fine-tuning.md](./02-rag/04-fine-tuning.md) — LoRA / QLoRA / SFT |
+| How do I build, test, and ship the app? | [03-orchestration/](./03-orchestration/) — LangChain, LangGraph, CrewAI, MCP, Bedrock AgentCore |
+| Where do I see it all wired together? | [05-projects/](./05-projects/) — 4 portfolio projects |
+| Where are the lecture zip resources? | [resources/](./resources/) |
 
 ### A real example to ground your intuition
 
@@ -81,16 +83,16 @@ You'll move faster if you've already worked through:
 
 ### Suggested reading order
 
-1. [01-llm-fundamentals.md](./01-llm-fundamentals.md)
-2. [02-prompt-engineering.md](./02-prompt-engineering.md)
-3. [06-langchain-claude-api.md](./06-langchain-claude-api.md) — get one real call working
-4. [03-rag-vector-databases.md](./03-rag-vector-databases.md)
-5. [04-agents-tool-use.md](./04-agents-tool-use.md)
-6. [07-evaluation-llm-apps.md](./07-evaluation-llm-apps.md)
-7. [05-fine-tuning-llms.md](./05-fine-tuning-llms.md) — last because it's the rarest in practice
-8. [08-deployment-cost.md](./08-deployment-cost.md)
+Work through the numbered folders in order. Each folder's `README.md` lists its files and recommends an internal order.
 
-Then dive into the deeper folders (`01-foundations/`, `02-rag/`, `03-orchestration/`, `04-agents/`) for the brochure-aligned drill-down, and finish with `05-projects/`.
+1. **[01-foundations/](./01-foundations/)** — what LLMs are, the levers (context, temperature), prompt engineering, hallucinations/security/cost
+2. **[03-orchestration/01-langchain.md](./03-orchestration/01-langchain.md)** — make your first real LLM call from Python
+3. **[02-rag/](./02-rag/)** — vector DBs → the RAG pattern → ChromaDB → when to fine-tune instead
+4. **[04-agents/](./04-agents/)** — tool-use, multi-agent patterns, agentic evaluation
+5. **[03-orchestration/](./03-orchestration/)** (remaining files) — LangGraph, CrewAI, MCP, Amazon Bedrock AgentCore
+6. **[05-projects/](./05-projects/)** — build all four portfolio projects, in order
+
+Bundled lecture handouts and starter zips live in **[resources/](./resources/)**.
 
 ---
 
@@ -154,12 +156,16 @@ The 2025 data role is increasingly an **AI-engineering** role: building applicat
 │   ├── 01-agent-fundamentals.md
 │   ├── 02-multi-agent-systems.md
 │   └── 03-agentic-evaluation.md
-└── 05-projects/
-    ├── README.md
-    ├── 01-real-estate-rag.md
-    ├── 02-ecommerce-chatbot.md
-    ├── 03-agentic-onboarding-mcp.md
-    └── 04-customer-care-agentcore.md
+├── 05-projects/
+│   ├── README.md
+│   ├── 01-real-estate-rag.md
+│   ├── 02-ecommerce-chatbot.md
+│   ├── 03-agentic-onboarding-mcp.md
+│   └── 04-customer-care-agentcore.md
+└── resources/                          ← bundled lecture zips & starter files
+    ├── GenAI_Finance_App_Resources.zip
+    ├── GenAI_Project1_resources.zip
+    └── GenAI_Project2_resources.zip
 ```
 
 ## Module-level goal
