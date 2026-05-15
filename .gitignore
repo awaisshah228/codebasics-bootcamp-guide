@@ -18,7 +18,8 @@ venv/
 *.env.local
 
 # large datasets / archives — keep out of git, store locally or in cloud
-*.zip
-*.tar
-*.tar.gz
-*.tgz
+# *.zip
+# *.tar
+# *.tar.gz
+# *.tgz
+core/07-deep-learning/exercise/Resources_TransferLearning_Caltech.zip
